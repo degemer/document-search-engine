@@ -62,10 +62,9 @@ type IdfWords map[string]float64
 func New(name string, options map[string]string) Index {
 	if strings.HasSuffix(name, "-stem") {
 		options["stemmer"] = "stem"
-		name = name[:len(name)-5]
 	}
-	switch name {
-	case "tf-idf-norm":
+	switch {
+	case strings.HasPrefix(name, TFIDFNORM):
 		temp := new(TfIdfNorm)
 		temp.reader = NewReader(options)
 		temp.tokenizer = NewTokenizer(options)
@@ -74,7 +73,7 @@ func New(name string, options map[string]string) Index {
 		temp.counter = NewCounter(options)
 		temp.saveDirectory = saveDirectory(TFIDFNORM, options)
 		return temp
-	case "tf-norm":
+	case strings.HasPrefix(name, TFNORM):
 		temp := new(TfNorm)
 		temp.reader = NewReader(options)
 		temp.tokenizer = NewTokenizer(options)
@@ -83,6 +82,19 @@ func New(name string, options map[string]string) Index {
 		temp.counter = NewCounter(options)
 		temp.saveDirectory = saveDirectory(TFNORM, options)
 		return temp
+	}
+	if name != "" && !strings.HasPrefix(name, TFIDF) {
+		fmt.Println(
+			"Index has to be one of:",
+			TFIDF,
+			TFIDFNORM,
+			TFNORM,
+			TFIDF+"-stem",
+			TFIDFNORM+"-stem",
+			TFNORM+"-stem",
+		)
+		fmt.Println("Received:", name)
+		os.Exit(1)
 	}
 	temp := new(TfIdf)
 	temp.reader = NewReader(options)

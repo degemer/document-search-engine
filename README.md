@@ -37,11 +37,11 @@ You can run `document-search-engine --help` to see all the options, but it has m
 - `document-search-engine -i INDEX_TYPE search SEARCH_TYPE` : query the `INDEX_TYPE` index using a SEARCH_TYPE search
 - `document-search-engine -i INDEX_TYPE measure SEARCH_TYPE` : return the main measures (minimum, maximum, average of precision, recall, E-Measure, ...) on `SEARCH_TYPE` search using `INDEX_TYPE` index
 
-`INDEX_TYPE` can take the values : `tf-idf`, `tf-idf-norm`, `tf-norm`, `tf-idf-stem`, `tf-idf-norm-stem`, `tf-norm-stem` (when `-stem` is present, Porter stemming will be used)
+`INDEX_TYPE` can take the values : `tf-idf`, `tf-idf-norm`, `tf-norm`, `tf-idf-stem`, `tf-idf-norm-stem`, `tf-norm-stem` (when `-stem` is present, Porter stemming will be used).
 
 `SEARCH_TYPE` can take the values : `vectorial`, `vectorial-dice`, `vectorial-jaccard`, `vectorial-overlap`, `boolean` and `probabilistic`.
 
-If you specify an incorrect or empty `INDEX_TYPE` and `SEARCH_TYPE`, they will default to `tf-idf` and `vectorial`.
+If you specify an empty `INDEX_TYPE` and `SEARCH_TYPE`, they will default to `tf-idf` and `vectorial`.
 
 A few examples :
 - `document-search-engine --save ~/custom_directory/ search` will load from `~/custom_directory/` a Tf-Idf index or create it (and save it in `~/custom_directory/`), create a `vectorial` search, and then wait for an input.

@@ -1,7 +1,9 @@
 package search
 
 import (
+	"fmt"
 	"github.com/degemer/document-search-engine/index"
+	"os"
 )
 
 type Searcher interface {
@@ -37,6 +39,19 @@ func New(name string, ind index.Index) Searcher {
 		temp.score = overlap
 		temp.Index = ind
 		return temp
+	}
+	if name != "" && name != "vectorial" {
+		fmt.Println(
+			"Index has to be one of:",
+			"boolean",
+			"probabilistic",
+			"vectorial",
+			"vectorial-dice",
+			"vectorial-jaccard",
+			"vectorial-overlap",
+		)
+		fmt.Println("Received:", name)
+		os.Exit(1)
 	}
 	temp := new(VectorialSearch)
 	temp.Index = ind
