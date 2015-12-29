@@ -27,6 +27,29 @@ func TestStandardTokenise(t *testing.T) {
 		"also", "had", "a", "LISP", "1", "5", "compiler", "Programming", "and", "debugging",
 		"was", "done", "from", "a", "remote", "teletype", "console", "at", "Stanford", "University",
 	}
-	testRawDocument := RawDocument{Id: 35, Content: strings.Replace(content, "\n", "", -1)}
-	assert.Equal(t, StandardTokenize(testRawDocument).Words, result_words, "They should be equal")
+	rawDocument := RawDocument{Id: 35, Content: strings.Replace(content, "\n", "", -1)}
+	tokenizedDocument := StandardTokenize(rawDocument)
+
+	assert.Equal(t, tokenizedDocument.Words, result_words, "They should be equal")
+	assert.Equal(t, tokenizedDocument.Id, 35, "They should be equal")
+}
+
+func TestCWFilter(t *testing.T) {
+	words := []string{
+		"An", "On", "Line", "Program", "for", "Non", "Numerical", "Algebra", "The", "goal",
+		"of", "this", "program", "is", "to", "make", "a", "step", "toward", "te", "design",
+		"of", "an", "automated", "mathematical", "assistant", "Some", "requirements", "for",
+	}
+	filters := map[string]struct{}{"on": struct{}{}, "a": struct{}{}, "algebra": struct{}{}}
+	filtered_words := []string{
+		"an", "line", "program", "for", "non", "numerical", "the", "goal", "of",
+		"this", "program", "is", "to", "make", "step", "toward", "te",
+		"design", "of", "an", "automated", "mathematical", "assistant",
+		"some", "requirements", "for",
+	}
+	tokenizedDocument := TokenizedDocument{Id: 45, Words: words}
+	filteredDocument := CWFilter(tokenizedDocument, filters)
+
+	assert.Equal(t, filteredDocument.Words, filtered_words, "Filter incorrect")
+	assert.Equal(t, filteredDocument.Id, 45, "Id modified...")
 }
