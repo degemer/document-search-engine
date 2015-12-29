@@ -75,4 +75,3 @@ func ScanCacmDocument(data []byte, atEOF bool) (advance int, token []byte, err e
 	// Request more data.
 	return 0, nil, nil
 }
-
