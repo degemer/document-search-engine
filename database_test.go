@@ -7,14 +7,15 @@ import (
 )
 
 func TestStandardTokenise(t *testing.T) {
-	content := `"An On-Line Program for Non-Numerical Algebra
-	The goal of this program is to make a step toward te design of an automated mathematical assistant.
-	Some requirements for such a program are: it must be easy to access,
-	and that the result must be obtained in a reasonably short time.
-	Accordingly the program is written for a time-shared computer.
-	The Q-32 computer as System Development Corporation, Santa Monica, California,
-	was chosen because it also had a LISP 1.5 compiler.
-	Programming and debugging was done from a remote teletype console at Stanford University.`
+	content := strings.Replace(`"An On-Line Program for Non-Numerical Algebra
+ The goal of this program is to make a step toward te design of an automated mathematical assistant.
+ Some requirements for such a program are: it must be easy to access,
+ and that the result must be obtained in a reasonably short time.
+ Accordingly the program is written for a time-shared computer.
+ The Q-32 computer as System Development Corporation, Santa Monica, California,
+ was chosen because it also had a LISP 1.5 compiler.
+ Programming and debugging was done from a remote teletype console at Stanford University.`,
+		"\n", "", -1)
 	result_words := []string{
 		"An", "On", "Line", "Program", "for", "Non", "Numerical", "Algebra", "The", "goal",
 		"of", "this", "program", "is", "to", "make", "a", "step", "toward", "te", "design",
@@ -27,11 +28,8 @@ func TestStandardTokenise(t *testing.T) {
 		"also", "had", "a", "LISP", "1", "5", "compiler", "Programming", "and", "debugging",
 		"was", "done", "from", "a", "remote", "teletype", "console", "at", "Stanford", "University",
 	}
-	rawDocument := RawDocument{Id: 35, Content: strings.Replace(content, "\n", "", -1)}
-	tokenizedDocument := StandardTokenize(rawDocument)
 
-	assert.Equal(t, tokenizedDocument.Words, result_words, "They should be equal")
-	assert.Equal(t, tokenizedDocument.Id, 35, "They should be equal")
+	assert.Equal(t, StandardTokenize(content), result_words, "They should be equal")
 }
 
 func TestCWFilter(t *testing.T) {
@@ -47,11 +45,8 @@ func TestCWFilter(t *testing.T) {
 		"design", "of", "an", "automated", "mathematical", "assistant",
 		"some", "requirements", "for",
 	}
-	tokenizedDocument := TokenizedDocument{Id: 45, Words: words}
-	filteredDocument := CWFilter(tokenizedDocument, filters)
 
-	assert.Equal(t, filteredDocument.Words, filtered_words, "Filter incorrect")
-	assert.Equal(t, filteredDocument.Id, 45, "Id modified...")
+	assert.Equal(t, CWFilter(words, filters), filtered_words, "Filter incorrect")
 }
 
 func TestCountWord(t *testing.T) {
