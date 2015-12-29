@@ -5,6 +5,6 @@ type Reader interface {
 }
 
 type RawDocument struct {
-	Id      string
+	Id      int
 	Content string
 }

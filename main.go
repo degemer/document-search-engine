@@ -1,7 +1,7 @@
 package main
 
 import (
-	// "fmt"
+	"fmt"
 	"log"
 )
 
@@ -10,8 +10,6 @@ func main() {
 	r := CacmReader{path: "cacm/cacm.all"}
 
 	for s := range r.Read() {
-		// fmt.Println(s)
-		if s.Id == "" {
-		}
+		fmt.Println(s)
 	}
 }
