@@ -20,6 +20,10 @@ type Filter interface {
 	Filter(<-chan TokenizedDocument) <-chan FilteredDocument
 }
 
+type Counter interface {
+	Count(<-chan FilteredDocument) <-chan CountedDocument
+}
+
 type RawDocument struct {
 	Id      int
 	Content string
@@ -35,11 +39,18 @@ type FilteredDocument struct {
 	Words []string
 }
 
+type CountedDocument struct {
+	Id         int
+	WordsCount map[string]int
+}
+
 type StandardTokenizer struct{}
 
 type CommonWordsFilter struct {
 	path string
 }
+
+type StandardCounter struct{}
 
 func (st StandardTokenizer) Tokenize(raw_documents <-chan RawDocument) <-chan TokenizedDocument {
 	tokenized_documents := make(chan TokenizedDocument)
@@ -76,6 +87,17 @@ func (cwf CommonWordsFilter) Filter(tokenized_documents <-chan TokenizedDocument
 	return filtered_documents
 }
 
+func (sc StandardCounter) Count(filteredDocuments <-chan FilteredDocument) <-chan CountedDocument {
+	countedDocuments := make(chan CountedDocument)
+	go func() {
+		for f := range filteredDocuments {
+			countedDocuments <- CountedDocument{Id: f.Id, WordsCount: CountWords(f.Words)}
+		}
+		close(countedDocuments)
+	}()
+	return countedDocuments
+}
+
 func StandardTokenize(r RawDocument) TokenizedDocument {
 	w := strings.FieldsFunc(r.Content, func(r rune) bool {
 		if unicode.IsLetter(r) || unicode.IsNumber(r) {
@@ -96,4 +118,12 @@ func CWFilter(t TokenizedDocument, common_words map[string]struct{}) FilteredDoc
 		}
 	}
 	return FilteredDocument{Id: t.Id, Words: filtered_words}
+}
+
+func CountWords(words []string) map[string]int {
+	wordsCount := make(map[string]int)
+	for _, s := range words {
+		wordsCount[s] += 1
+	}
+	return wordsCount
 }
