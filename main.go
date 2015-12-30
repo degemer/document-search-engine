@@ -15,8 +15,8 @@ func main() {
 	counter := index.StandardCounter{}
 
 	start := time.Now()
-	for s := range counter.Count(filter.Filter(tokenizer.Tokenize(reader.Read()))) {
-		if s.Id == 1 {
+	for s := range index.Tf(counter.Count(filter.Filter(tokenizer.Tokenize(reader.Read())))) {
+		if s.Id == 3204 {
 			fmt.Println(s)
 		}
 		// fmt.Println(s)
