@@ -1,4 +1,4 @@
-package main
+package index
 
 import (
 	"bufio"
@@ -10,8 +10,17 @@ import (
 	"strings"
 )
 
+type Reader interface {
+	Read() <-chan RawDocument
+}
+
+type RawDocument struct {
+	Id      int
+	Content string
+}
+
 type CacmReader struct {
-	path string
+	Path string
 }
 
 func (c CacmReader) Read() <-chan RawDocument {
@@ -19,17 +28,17 @@ func (c CacmReader) Read() <-chan RawDocument {
 }
 
 func (c CacmReader) scanDatabase() <-chan string {
-	file, err := os.Open(c.path)
+	file, err := os.Open(c.Path)
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	scanner := bufio.NewScanner(file)
 	scanner.Split(ScanCacmDocument)
-	unparsed_strings := make(chan string)
+	unparsedStrings := make(chan string)
 	go func() {
 		for scanner.Scan() {
-			unparsed_strings <- scanner.Text()
+			unparsedStrings <- scanner.Text()
 		}
 		// Can't be deferred, otherwise is closed before the scan starts
 		file.Close()
@@ -37,27 +46,27 @@ func (c CacmReader) scanDatabase() <-chan string {
 		if err := scanner.Err(); err != nil {
 			log.Fatalln("Error scanning file: ", err)
 		}
-		close(unparsed_strings)
+		close(unparsedStrings)
 	}()
-	return unparsed_strings
+	return unparsedStrings
 }
 
-func (c CacmReader) parseDocument(unparsed_strings <-chan string) <-chan RawDocument {
+func (c CacmReader) parseDocument(unparsedStrings <-chan string) <-chan RawDocument {
 	regex_expr := `(?ms)^\.I (\d+).^\.T.(.+?)(?:.^\.W.(.+?))?.^\.B.(.+?)(?:.^\.A.(.+?))?(?:.^\.K.(.+?))?(?:.^\.C.(.+?))?.^\.N.(.+?).^\.X.(.+?)`
 	r := regexp.MustCompile(regex_expr)
-	raw_documents := make(chan RawDocument)
+	rawDocuments := make(chan RawDocument)
 	go func() {
-		for s := range unparsed_strings {
+		for s := range unparsedStrings {
 			regex_result := r.FindAllStringSubmatch(s, -1)[0]
 			I, err := strconv.Atoi(regex_result[1])
 			if err != nil {
 				log.Fatalln("Unable to convert id ", regex_result[1], "to int: ", err)
 			}
-			raw_documents <- RawDocument{Id: I, Content: strings.Replace(regex_result[2]+" "+regex_result[3]+" "+regex_result[6], "\n", " ", -1)}
+			rawDocuments <- RawDocument{Id: I, Content: strings.Replace(regex_result[2]+" "+regex_result[3]+" "+regex_result[6], "\n", " ", -1)}
 		}
-		close(raw_documents)
+		close(rawDocuments)
 	}()
-	return raw_documents
+	return rawDocuments
 }
 
 func ScanCacmDocument(data []byte, atEOF bool) (advance int, token []byte, err error) {

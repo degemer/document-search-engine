@@ -2,16 +2,17 @@ package main
 
 import (
 	"fmt"
+	"github.com/degemer/document-search-engine/index"
 	"log"
 	"time"
 )
 
 func main() {
 	log.Println("Starting")
-	reader := CacmReader{path: "cacm/cacm.all"}
-	tokenizer := StandardTokenizer{}
-	filter := CommonWordsFilter{path: "cacm/common_words"}
-	counter := StandardCounter{}
+	reader := index.CacmReader{Path: "cacm/cacm.all"}
+	tokenizer := index.StandardTokenizer{}
+	filter := index.CommonWordsFilter{Path: "cacm/common_words"}
+	counter := index.StandardCounter{}
 
 	start := time.Now()
 	for s := range counter.Count(filter.Filter(tokenizer.Tokenize(reader.Read()))) {
