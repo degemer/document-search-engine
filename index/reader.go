@@ -5,7 +5,6 @@ import (
 	"bytes"
 	"log"
 	"os"
-	"regexp"
 	"strconv"
 	"strings"
 )
@@ -52,17 +51,11 @@ func (c CacmReader) scanDatabase() <-chan string {
 }
 
 func (c CacmReader) parseDocument(unparsedStrings <-chan string) <-chan RawDocument {
-	regex_expr := `(?ms)^\.I (\d+).^\.T.(.+?)(?:.^\.W.(.+?))?.^\.B.(.+?)(?:.^\.A.(.+?))?(?:.^\.K.(.+?))?(?:.^\.C.(.+?))?.^\.N.(.+?).^\.X.(.+?)`
-	r := regexp.MustCompile(regex_expr)
 	rawDocuments := make(chan RawDocument)
 	go func() {
 		for s := range unparsedStrings {
-			regex_result := r.FindAllStringSubmatch(s, -1)[0]
-			I, err := strconv.Atoi(regex_result[1])
-			if err != nil {
-				log.Fatalln("Unable to convert id ", regex_result[1], "to int: ", err)
-			}
-			rawDocuments <- RawDocument{Id: I, Content: strings.Replace(regex_result[2]+" "+regex_result[3]+" "+regex_result[6], "\n", " ", -1)}
+			id, content := parseDoc(s)
+			rawDocuments <- RawDocument{Id: id, Content: content}
 		}
 		close(rawDocuments)
 	}()
@@ -83,4 +76,30 @@ func ScanCacmDocument(data []byte, atEOF bool) (advance int, token []byte, err e
 	}
 	// Request more data.
 	return 0, nil, nil
+}
+
+func parseDoc(doc string) (int, string) {
+	baseValues := []string{"T", "W", "B", "A", "K", "C", "N", "X"}
+	presentValues := []string{}
+	indValues := []int{}
+	content := ""
+
+	for _, val := range baseValues {
+		if ind := strings.Index(doc, "\n."+val); ind != -1 {
+			presentValues = append(presentValues, val)
+			indValues = append(indValues, ind)
+		}
+	}
+
+	id, err := strconv.Atoi(doc[3:indValues[0]])
+	if err != nil {
+		log.Fatalln("Unable to convert id ", doc[3:indValues[0]], "to int: ", err)
+	}
+
+	for i, val := range presentValues {
+		if val == "T" || val == "W" || val == "K" {
+			content += doc[indValues[i]+3 : indValues[i+1]]
+		}
+	}
+	return id, content
 }

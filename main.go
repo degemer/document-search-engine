@@ -19,7 +19,6 @@ func main() {
 		if s.Id == 3204 {
 			fmt.Println(s)
 		}
-		// fmt.Println(s)
 	}
 	elapsed := time.Since(start)
 	log.Printf("Index creation took %s", elapsed)
