@@ -20,8 +20,12 @@ type CommonWordsFilter struct {
 	Path string
 }
 
+func NewFilter(options map[string]string) Filter {
+	return CommonWordsFilter{Path: options["common_words_path"]}
+}
+
 func (cwf CommonWordsFilter) Filter(tokenizedDocuments <-chan TokenizedDocument) <-chan FilteredDocument {
-	filteredDocuments := make(chan FilteredDocument)
+	filteredDocuments := make(chan FilteredDocument, CHANNEL_SIZE)
 	common_words := make(map[string]struct{})
 
 	file, err := os.Open(cwf.Path)

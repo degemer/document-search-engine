@@ -1,7 +1,7 @@
 package main
 
 import (
-	"fmt"
+	// "fmt"
 	"github.com/degemer/document-search-engine/index"
 	"log"
 	"time"
@@ -9,17 +9,9 @@ import (
 
 func main() {
 	log.Println("Starting")
-	reader := index.CacmReader{Path: "cacm/cacm.all"}
-	tokenizer := index.StandardTokenizer{}
-	filter := index.CommonWordsFilter{Path: "cacm/common_words"}
-	counter := index.StandardCounter{}
-
 	start := time.Now()
-	for s := range index.Tf(counter.Count(filter.Filter(tokenizer.Tokenize(reader.Read())))) {
-		if s.Id == 3204 {
-			fmt.Println(s)
-		}
-	}
+	i := index.New("tf-idf", map[string]string{"cacm_path": "cacm/cacm.all", "common_words_path": "cacm/common_words"})
+	i.Create()
 	elapsed := time.Since(start)
 	log.Printf("Index creation took %s", elapsed)
 }

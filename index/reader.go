@@ -22,6 +22,10 @@ type CacmReader struct {
 	Path string
 }
 
+func NewReader(options map[string]string) Reader {
+	return CacmReader{Path: options["cacm_path"]}
+}
+
 func (c CacmReader) Read() <-chan RawDocument {
 	return c.parseDocument(c.scanDatabase())
 }
@@ -34,7 +38,7 @@ func (c CacmReader) scanDatabase() <-chan string {
 
 	scanner := bufio.NewScanner(file)
 	scanner.Split(ScanCacmDocument)
-	unparsedStrings := make(chan string)
+	unparsedStrings := make(chan string, CHANNEL_SIZE)
 	go func() {
 		for scanner.Scan() {
 			unparsedStrings <- scanner.Text()
@@ -51,7 +55,7 @@ func (c CacmReader) scanDatabase() <-chan string {
 }
 
 func (c CacmReader) parseDocument(unparsedStrings <-chan string) <-chan RawDocument {
-	rawDocuments := make(chan RawDocument)
+	rawDocuments := make(chan RawDocument, CHANNEL_SIZE)
 	go func() {
 		for s := range unparsedStrings {
 			id, content := parseDoc(s)

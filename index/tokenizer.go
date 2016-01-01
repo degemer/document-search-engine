@@ -13,8 +13,12 @@ type TokenizedDocument struct {
 
 type StandardTokenizer struct{}
 
+func NewTokenizer(options map[string]string) Tokenizer {
+	return StandardTokenizer{}
+}
+
 func (st StandardTokenizer) Tokenize(rawDocuments <-chan RawDocument) <-chan TokenizedDocument {
-	tokenizedDocuments := make(chan TokenizedDocument)
+	tokenizedDocuments := make(chan TokenizedDocument, CHANNEL_SIZE)
 	go func() {
 		for r := range rawDocuments {
 			tokenizedDocuments <- TokenizedDocument{Id: r.Id, Words: parser.StandardTokenize(r.Content)}
