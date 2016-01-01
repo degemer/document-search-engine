@@ -2,16 +2,19 @@ package index
 
 import (
 	"math"
-	"fmt"
+	"os"
+	"encoding/gob"
+	"log"
 )
 
 const CHANNEL_SIZE int = 50
+const TFIDFFILE string = "tf-idf.index"
 
 type Index interface {
 	Create()
-	PrintIndex()
-	// Load()
-	// Save()
+	GetIndex() map[string][]DocFreq
+	Load()
+	Save()
 }
 
 type DocFreq struct {
@@ -49,10 +52,16 @@ func (index *TfIdf) Create() {
 	index.index = CreateTfIdf(countedDocuments, wordsCountDoc)
 }
 
-func (index *TfIdf) PrintIndex() {
-	for word, docFreq := range index.index {
-		fmt.Println(word, docFreq)
-	}
+func (index *TfIdf) GetIndex() map[string][]DocFreq {
+	return index.index
+}
+
+func (index *TfIdf) Load() {
+	index.index = loadIndex(TFIDFFILE)
+}
+
+func (index *TfIdf) Save() {
+	 saveIndex(TFIDFFILE, index.index)
 }
 
 func Tf(countedDocuments <-chan CountedDocument) <-chan TfDocument {
@@ -105,4 +114,27 @@ func wordsTfFrequency(wordsCount map[string]int) map[string]float64 {
 		wordsFrequency[word] = 1.0 + math.Log10(float64(numberWords))
 	}
 	return wordsFrequency
+}
+
+func saveIndex(filePath string, index map[string][]DocFreq) {
+	indexFile, err := os.Create(filePath)
+	if err != nil {
+             log.Fatalln("Unable to create index file ", filePath, " : ", err)
+     }
+     indexEncoder := gob.NewEncoder(indexFile)
+     indexEncoder.Encode(index)
+     indexFile.Close()
+}
+
+func loadIndex(filePath string) map[string][]DocFreq {
+	index := make(map[string][]DocFreq)
+	indexFile, err := os.Open(filePath)
+	if err != nil {
+             log.Fatalln("Unable to open index file ", filePath, " : ", err)
+     }
+     indexEncoder := gob.NewDecoder(indexFile)
+     indexEncoder.Decode(&index)
+     indexFile.Close()
+
+     return index
 }
