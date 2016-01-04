@@ -12,7 +12,7 @@ type CountedDocument struct {
 }
 
 type WordsCountDoc struct {
-	NumberDocuments  int
+	NumberDocuments int
 	WordsOccurences map[string]int
 }
 
