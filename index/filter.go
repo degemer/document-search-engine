@@ -2,9 +2,9 @@ package index
 
 import (
 	"bufio"
-	"github.com/degemer/document-search-engine/parser"
 	"log"
 	"os"
+	"strings"
 )
 
 type Filter interface {
@@ -41,9 +41,20 @@ func (cwf CommonWordsFilter) Filter(tokenizedDocuments <-chan TokenizedDocument)
 
 	go func() {
 		for t := range tokenizedDocuments {
-			filteredDocuments <- FilteredDocument{Id: t.Id, Words: parser.CWFilter(t.Words, common_words)}
+			filteredDocuments <- FilteredDocument{Id: t.Id, Words: cwFilter(t.Words, common_words)}
 		}
 		close(filteredDocuments)
 	}()
 	return filteredDocuments
+}
+
+func cwFilter(words []string, commonWords map[string]struct{}) (filteredWords []string) {
+	for _, s := range words {
+		s = strings.ToLower(s)
+		_, ok := commonWords[s]
+		if !ok {
+			filteredWords = append(filteredWords, s)
+		}
+	}
+	return
 }

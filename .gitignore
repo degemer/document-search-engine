@@ -26,3 +26,4 @@ _testmain.go
 # Specific to project
 cacm/
 *.index
+*.idf

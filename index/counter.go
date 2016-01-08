@@ -1,7 +1,5 @@
 package index
 
-import "github.com/degemer/document-search-engine/parser"
-
 type Counter interface {
 	Count(<-chan FilteredDocument) (<-chan CountedDocument, <-chan WordsCountDoc)
 }
@@ -30,7 +28,7 @@ func (sc StandardCounter) Count(filteredDocuments <-chan FilteredDocument) (<-ch
 	go func() {
 		for f := range filteredDocuments {
 			N += 1
-			wordsCount := parser.CountWords(f.Words)
+			wordsCount := countWords(f.Words)
 			countedDocuments <- CountedDocument{Id: f.Id, WordsCount: wordsCount}
 			for words, _ := range wordsCount {
 				wordsOccurences[words] += 1
@@ -42,4 +40,12 @@ func (sc StandardCounter) Count(filteredDocuments <-chan FilteredDocument) (<-ch
 		close(wordsCountDoc)
 	}()
 	return countedDocuments, wordsCountDoc
+}
+
+func countWords(words []string) map[string]int {
+	wordsCount := make(map[string]int)
+	for _, s := range words {
+		wordsCount[s] += 1
+	}
+	return wordsCount
 }

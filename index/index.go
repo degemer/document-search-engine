@@ -9,10 +9,10 @@ import (
 
 const CHANNEL_SIZE int = 50
 const TFIDFFILE string = "tf-idf.index"
+const IDFFILE string = "tf-idf.idf"
 
 type Index interface {
 	Create()
-	GetIndex() map[string][]DocFreq
 	Load()
 	Save()
 }
@@ -22,10 +22,18 @@ type DocFreq struct {
 	Freq float64
 }
 
+type StandardIndex struct {
+	index     map[string][]DocFreq
+	filePath  string
+	reader    Reader
+	tokenizer Tokenizer
+	filter    Filter
+	counter   Counter
+}
+
 type TfIdf struct {
-	options  map[string]string
-	filePath string
-	index    map[string][]DocFreq
+	StandardIndex
+	idf IdfWords
 }
 
 type TfDocument struct {
@@ -35,33 +43,46 @@ type TfDocument struct {
 
 type IdfWords map[string]float64
 
-func New(name string, options map[string]string) (ind Index) {
+func New(name string, options map[string]string) Index {
 	temp := new(TfIdf)
-	temp.options = options
 	temp.filePath = options["save_path"]
+	temp.reader = NewReader(options)
+	temp.tokenizer = NewTokenizer(options)
+	temp.filter = NewFilter(options)
+	temp.counter = NewCounter(options)
 	return temp
 }
 
-func (index *TfIdf) Create() {
-	reader := NewReader(index.options)
-	tokenizer := NewTokenizer(index.options)
-	filter := NewFilter(index.options)
-	counter := NewCounter(index.options)
-	countedDocuments, wordsCountDoc := counter.Count(filter.Filter(tokenizer.Tokenize(reader.Read())))
+func (ti *TfIdf) Create() {
+	countedDocuments, wordsCountDoc := ti.counter.Count(ti.filter.Filter(ti.tokenizer.Tokenize(ti.reader.Read())))
 
-	index.index = CreateTfIdf(countedDocuments, wordsCountDoc)
+	ti.index, ti.idf = CreateTfIdf(countedDocuments, wordsCountDoc)
 }
 
-func (index *TfIdf) GetIndex() map[string][]DocFreq {
-	return index.index
+func (ti *TfIdf) GetIndex() map[string][]DocFreq {
+	return ti.index
 }
 
-func (index *TfIdf) Load() {
-	index.index = loadIndex(TFIDFFILE)
+func (ti *TfIdf) Load() {
+	ti.index = loadIndex(TFIDFFILE)
+	idfFile, err := os.Open(IDFFILE)
+	if err != nil {
+		log.Fatalln("Unable to open idf file ", IDFFILE, " : ", err)
+	}
+	idfEncoder := gob.NewDecoder(idfFile)
+	idfEncoder.Decode(&ti.idf)
+	idfFile.Close()
 }
 
-func (index *TfIdf) Save() {
-	saveIndex(TFIDFFILE, index.index)
+func (ti *TfIdf) Save() {
+	saveIndex(TFIDFFILE, ti.index)
+	idfFile, err := os.Create(IDFFILE)
+	if err != nil {
+		log.Fatalln("Unable to create idf file ", IDFFILE, " : ", err)
+	}
+	idfEncoder := gob.NewEncoder(idfFile)
+	idfEncoder.Encode(ti.idf)
+	idfFile.Close()
 }
 
 func Tf(countedDocuments <-chan CountedDocument) <-chan TfDocument {
@@ -91,7 +112,7 @@ func Idf(wordsCountDoc <-chan WordsCountDoc) <-chan IdfWords {
 	return idfWords
 }
 
-func CreateTfIdf(countedDocuments <-chan CountedDocument, wordsCountDoc <-chan WordsCountDoc) map[string][]DocFreq {
+func CreateTfIdf(countedDocuments <-chan CountedDocument, wordsCountDoc <-chan WordsCountDoc) (map[string][]DocFreq, IdfWords) {
 	tfDocuments := []TfDocument{}
 	idfWords := Idf(wordsCountDoc)
 	for tfDoc := range Tf(countedDocuments) {
@@ -105,7 +126,7 @@ func CreateTfIdf(countedDocuments <-chan CountedDocument, wordsCountDoc <-chan W
 			index[word] = append(index[word], DocFreq{Id: tfDoc.Id, Freq: freq * idfWord[word]})
 		}
 	}
-	return index
+	return index, idfWord
 }
 
 func wordsTfFrequency(wordsCount map[string]int) map[string]float64 {
