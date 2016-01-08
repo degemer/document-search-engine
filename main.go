@@ -3,12 +3,15 @@ package main
 import (
 	"github.com/codegangsta/cli"
 	"github.com/degemer/document-search-engine/index"
+	"github.com/degemer/document-search-engine/search"
 	"log"
 	"os"
 	"time"
 )
 
 func main() {
+	temp := search.New("test", index.New("tf-idf", map[string]string{"cacm_path": "cacm/cacm.all", "common_words_path": "cacm/common_words"}))
+	temp.Search("test")
 	app := cli.NewApp()
 	app.Name = "document-search-engine"
 	app.Usage = "Search database"
