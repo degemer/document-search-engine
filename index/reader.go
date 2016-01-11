@@ -11,6 +11,7 @@ import (
 
 type Reader interface {
 	Read() <-chan RawDocument
+	ReadOne(string) RawDocument
 }
 
 type RawDocument struct {
@@ -58,12 +59,16 @@ func (c CacmReader) parseDocument(unparsedStrings <-chan string) <-chan RawDocum
 	rawDocuments := make(chan RawDocument, CHANNEL_SIZE)
 	go func() {
 		for s := range unparsedStrings {
-			id, content := cacmDoc(s)
-			rawDocuments <- RawDocument{Id: id, Content: content}
+			rawDocuments <- c.ReadOne(s)
 		}
 		close(rawDocuments)
 	}()
 	return rawDocuments
+}
+
+func (c CacmReader) ReadOne(doc string) RawDocument {
+	id, content := cacmDoc(doc)
+	return RawDocument{Id: id, Content: content}
 }
 
 func scanCacmDocument(data []byte, atEOF bool) (advance int, token []byte, err error) {

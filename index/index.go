@@ -15,6 +15,8 @@ type Index interface {
 	Create()
 	Load()
 	Save()
+	Score(string) ScoredDocument
+	Get(string) []DocFreq
 }
 
 type DocFreq struct {
@@ -37,6 +39,11 @@ type TfIdf struct {
 }
 
 type TfDocument struct {
+	Id             int
+	WordsFrequency map[string]float64
+}
+
+type ScoredDocument struct {
 	Id             int
 	WordsFrequency map[string]float64
 }
@@ -83,6 +90,19 @@ func (ti *TfIdf) Save() {
 	idfEncoder := gob.NewEncoder(idfFile)
 	idfEncoder.Encode(ti.idf)
 	idfFile.Close()
+}
+
+func (ti *TfIdf) Score(doc string) ScoredDocument {
+	score := make(map[string]float64)
+	countedDocument := ti.counter.CountOne(ti.filter.FilterOne(ti.tokenizer.TokenizeOne(ti.reader.ReadOne(doc))))
+	for word, freq := range wordsTfFrequency(countedDocument.WordsCount) {
+		score[word] = freq * ti.idf[word]
+	}
+	return ScoredDocument{Id: countedDocument.Id, WordsFrequency: score}
+}
+
+func (ti *TfIdf) Get(word string) []DocFreq {
+	return ti.index[word]
 }
 
 func Tf(countedDocuments <-chan CountedDocument) <-chan TfDocument {

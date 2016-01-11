@@ -2,6 +2,7 @@ package index
 
 type Counter interface {
 	Count(<-chan FilteredDocument) (<-chan CountedDocument, <-chan WordsCountDoc)
+	CountOne(FilteredDocument) CountedDocument
 }
 
 type CountedDocument struct {
@@ -40,6 +41,10 @@ func (sc StandardCounter) Count(filteredDocuments <-chan FilteredDocument) (<-ch
 		close(wordsCountDoc)
 	}()
 	return countedDocuments, wordsCountDoc
+}
+
+func (sc StandardCounter) CountOne(f FilteredDocument) CountedDocument {
+	return CountedDocument{Id: f.Id, WordsCount: countWords(f.Words)}
 }
 
 func countWords(words []string) map[string]int {

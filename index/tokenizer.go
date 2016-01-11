@@ -7,6 +7,7 @@ import (
 
 type Tokenizer interface {
 	Tokenize(<-chan RawDocument) <-chan TokenizedDocument
+	TokenizeOne(RawDocument) TokenizedDocument
 }
 
 type TokenizedDocument struct {
@@ -24,11 +25,15 @@ func (st StandardTokenizer) Tokenize(rawDocuments <-chan RawDocument) <-chan Tok
 	tokenizedDocuments := make(chan TokenizedDocument, CHANNEL_SIZE)
 	go func() {
 		for r := range rawDocuments {
-			tokenizedDocuments <- TokenizedDocument{Id: r.Id, Words: standardTokenize(r.Content)}
+			tokenizedDocuments <- st.TokenizeOne(r)
 		}
 		close(tokenizedDocuments)
 	}()
 	return tokenizedDocuments
+}
+
+func (st StandardTokenizer) TokenizeOne(r RawDocument) TokenizedDocument {
+	return TokenizedDocument{Id: r.Id, Words: standardTokenize(r.Content)}
 }
 
 func standardTokenize(content string) []string {

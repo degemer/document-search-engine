@@ -9,6 +9,7 @@ import (
 
 type Filter interface {
 	Filter(<-chan TokenizedDocument) <-chan FilteredDocument
+	FilterOne(TokenizedDocument) FilteredDocument
 }
 
 type FilteredDocument struct {
@@ -17,35 +18,41 @@ type FilteredDocument struct {
 }
 
 type CommonWordsFilter struct {
-	Path string
+	path        string
+	commonWords map[string]struct{}
 }
 
 func NewFilter(options map[string]string) Filter {
-	return CommonWordsFilter{Path: options["common_words_path"]}
-}
+	cwf := CommonWordsFilter{path: options["common_words_path"]}
+	cwf.commonWords = make(map[string]struct{})
 
-func (cwf CommonWordsFilter) Filter(tokenizedDocuments <-chan TokenizedDocument) <-chan FilteredDocument {
-	filteredDocuments := make(chan FilteredDocument, CHANNEL_SIZE)
-	common_words := make(map[string]struct{})
-
-	file, err := os.Open(cwf.Path)
+	file, err := os.Open(cwf.path)
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	scanner := bufio.NewScanner(file)
 	for scanner.Scan() {
-		common_words[scanner.Text()] = struct{}{}
+		cwf.commonWords[scanner.Text()] = struct{}{}
 	}
 	file.Close()
+	return cwf
+}
+
+func (cwf CommonWordsFilter) Filter(tokenizedDocuments <-chan TokenizedDocument) <-chan FilteredDocument {
+	filteredDocuments := make(chan FilteredDocument, CHANNEL_SIZE)
 
 	go func() {
 		for t := range tokenizedDocuments {
-			filteredDocuments <- FilteredDocument{Id: t.Id, Words: cwFilter(t.Words, common_words)}
+			filteredDocuments <- cwf.FilterOne(t)
 		}
 		close(filteredDocuments)
 	}()
 	return filteredDocuments
+}
+
+func (cwf CommonWordsFilter) FilterOne(t TokenizedDocument) FilteredDocument {
+	return FilteredDocument{Id: t.Id, Words: cwFilter(t.Words, cwf.commonWords)}
 }
 
 func cwFilter(words []string, commonWords map[string]struct{}) (filteredWords []string) {

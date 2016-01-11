@@ -10,8 +10,6 @@ import (
 )
 
 func main() {
-	temp := search.New("test", index.New("tf-idf", map[string]string{"cacm_path": "cacm/cacm.all", "common_words_path": "cacm/common_words"}))
-	temp.Search("test")
 	app := cli.NewApp()
 	app.Name = "document-search-engine"
 	app.Usage = "Search database"
@@ -29,6 +27,20 @@ func main() {
 		j.Load()
 		elapsed_load := time.Since(start_load)
 		log.Printf("Index load took %s", elapsed_load)
+
+		temp := search.New("vectorial", i)
+		req := `.I 2
+.W
+ I am interested in articles written either by Prieve or Udo Pooch
+.A
+Prieve, B.
+Pooch, U.
+.N
+ 2. Richard Alexander, Comp Serv, Langmuir Lab (author = Pooch or Prieve)
+ `
+ 		for i, res := range(temp.Search(req)) {
+			log.Println("Res", i, ":", res.Id, "-", res.Score)
+ 		}
 	}
 	app.Run(os.Args)
 }
