@@ -29,15 +29,7 @@ func main() {
 		log.Printf("Index load took %s", elapsed_load)
 
 		temp := search.New("vectorial", i)
-		req := `.I 2
-.W
- I am interested in articles written either by Prieve or Udo Pooch
-.A
-Prieve, B.
-Pooch, U.
-.N
- 2. Richard Alexander, Comp Serv, Langmuir Lab (author = Pooch or Prieve)
- `
+		req := `Preliminary Report-International Algebraic Language`
  		for i, res := range(temp.Search(req)) {
 			log.Println("Res", i, ":", res.Id, "-", res.Score)
  		}

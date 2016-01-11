@@ -99,7 +99,10 @@ func cacmDoc(doc string) (int, string) {
 			indValues = append(indValues, ind)
 		}
 	}
-
+	if len(indValues) == 0 {
+		log.Println("Unable to parse doc, assuming it's not a standard Cacm doc")
+		return 0, doc
+	}
 	id, err := strconv.Atoi(doc[3:indValues[0]])
 	if err != nil {
 		log.Fatalln("Unable to convert id ", doc[3:indValues[0]], "to int: ", err)
