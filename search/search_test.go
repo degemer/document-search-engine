@@ -19,3 +19,10 @@ func TestBooleanPrefix(t *testing.T) {
 	prefixedR4 := []string{"not", "or", "and", "aaa", "bbb", "ccc"}
 	assert.Equal(t, booleanPrefix(r4), prefixedR4)
 }
+
+func BenchmarkBooleanPrefix(b *testing.B) {
+    r4 := "NOT (aaa AND bbb OR ccc) OR ddd AND (eee OR NOT fff)"
+    for i := 0; i < b.N; i++ {
+		booleanPrefix(r4)
+    }
+}
