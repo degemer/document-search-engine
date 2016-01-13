@@ -94,7 +94,7 @@ func (ti *TfIdf) Save() {
 
 func (ti *TfIdf) Score(doc string) ScoredDocument {
 	score := make(map[string]float64)
-	countedDocument := ti.counter.CountOne(ti.filter.FilterOne(ti.tokenizer.TokenizeOne(ti.reader.ReadOne(doc))))
+	countedDocument := ti.counter.CountOne(ti.filter.FilterOne(ti.tokenizer.TokenizeOne(doc)))
 	for word, freq := range wordsTfFrequency(countedDocument.WordsCount) {
 		score[word] = freq * ti.idf[word]
 	}
