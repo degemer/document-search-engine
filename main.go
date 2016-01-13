@@ -30,9 +30,9 @@ func main() {
 
 		temp := search.New("vectorial", i)
 		req := `Preliminary Report-International Algebraic Language`
- 		for i, res := range(temp.Search(req)) {
+		for i, res := range temp.Search(req) {
 			log.Println("Res", i, ":", res.Id, "-", res.Score)
- 		}
+		}
 	}
 	app.Run(os.Args)
 }
