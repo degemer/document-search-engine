@@ -14,15 +14,10 @@ const (
 	BOOL_NOT = "not"
 )
 
-type Result struct {
-	Id    int
-	Score float64
-}
-
-type ByScore []Result
+type ByScore []index.DocScore
 
 type Searcher interface {
-	Search(string) []Result
+	Search(string) []index.DocScore
 }
 
 type StandardSearch struct {
@@ -39,7 +34,7 @@ type BooleanSearch struct {
 
 func New(name string, ind index.Index) Searcher {
 	switch {
-	case name == "bs":
+	case name == "boolean":
 		temp := new(BooleanSearch)
 		temp.Index = ind
 		return temp
@@ -49,31 +44,112 @@ func New(name string, ind index.Index) Searcher {
 	return temp
 }
 
-func (vs VectorialSearch) Search(request string) (results []Result) {
+func (vs VectorialSearch) Search(request string) (result []index.DocScore) {
 	scoredReq := vs.Index.Score(request)
 	sumScoreReq := 0.0
 	sumScoreDocs := make(map[int]float64)
 	productScoreReqDocs := make(map[int]float64)
 	for word, score := range scoredReq.WordsFrequency {
 		sumScoreReq += score * score
-		for _, docFreq := range vs.Index.Get(word) {
-			sumScoreDocs[docFreq.Id] += docFreq.Freq * docFreq.Freq
-			productScoreReqDocs[docFreq.Id] += docFreq.Freq * score
+		for _, docScore := range vs.Index.Get(word) {
+			sumScoreDocs[docScore.Id] += docScore.Score * docScore.Score
+			productScoreReqDocs[docScore.Id] += docScore.Score * score
 		}
 	}
 	for id, sum := range sumScoreDocs {
-		results = append(
-			results,
-			Result{Id: id, Score: cosSim(productScoreReqDocs[id], sum, sumScoreReq)})
+		result = append(
+			result,
+			index.DocScore{Id: id, Score: cosSim(productScoreReqDocs[id], sum, sumScoreReq)})
 	}
-	sort.Sort(ByScore(results))
+	sort.Sort(ByScore(result))
 	return
 }
 
-func (bs BooleanSearch) Search(request string) (results []Result) {
-	prefixedRequest := booleanPrefix(request)
-	if prefixedRequest != nil {
-		return
+func (bs BooleanSearch) Search(request string) (docScores []index.DocScore) {
+	docScores, _ = bs.booleanScores(booleanPrefix(request), 0)
+	sort.Sort(ByScore(docScores))
+	return
+}
+
+func (bs BooleanSearch) booleanScores(prefixed []string, pos int) ([]index.DocScore, int) {
+	if pos == len(prefixed) {
+		return []index.DocScore{}, pos
+	}
+	switch prefixed[pos] {
+	case BOOL_AND:
+		docScores1, pos := bs.booleanScores(prefixed, pos+1)
+		docScores2, pos := bs.booleanScores(prefixed, pos)
+		return intersect(docScores1, docScores2), pos
+	case BOOL_OR:
+		docScores1, pos := bs.booleanScores(prefixed, pos+1)
+		docScores2, pos := bs.booleanScores(prefixed, pos)
+		return union(docScores1, docScores2), pos
+	case BOOL_NOT:
+		docScores, pos := bs.booleanScores(prefixed, pos+1)
+		return not(docScores, bs.Index.GetAllIds()), pos
+	}
+	return bs.Index.Get(prefixed[pos]), pos + 1
+}
+
+func intersect(docScores1 []index.DocScore, docScores2 []index.DocScore) (intersected []index.DocScore) {
+	ind1, ind2 := 0, 0
+	for ind1 != len(docScores1) && ind2 != len(docScores2) {
+		if docScores1[ind1].Id == docScores2[ind2].Id {
+			intersected = append(intersected,
+				index.DocScore{Id: docScores1[ind1].Id,
+					Score: docScores1[ind1].Score + docScores2[ind2].Score})
+			ind1 += 1
+			ind2 += 1
+		} else if docScores1[ind1].Id < docScores2[ind2].Id {
+			ind1 += 1
+		} else {
+			ind2 += 1
+		}
+	}
+	return
+}
+
+func union(docScores1 []index.DocScore, docScores2 []index.DocScore) (unioned []index.DocScore) {
+	ind1, ind2 := 0, 0
+	for ind1 != len(docScores1) && ind2 != len(docScores2) {
+		if docScores1[ind1].Id == docScores2[ind2].Id {
+			unioned = append(unioned,
+				index.DocScore{Id: docScores1[ind1].Id,
+					Score: docScores1[ind1].Score + docScores2[ind2].Score})
+			ind1 += 1
+			ind2 += 1
+		} else if docScores1[ind1].Id < docScores2[ind2].Id {
+			unioned = append(unioned, docScores1[ind1])
+			ind1 += 1
+		} else {
+			unioned = append(unioned, docScores2[ind2])
+			ind2 += 1
+		}
+	}
+	if ind1 != len(docScores1) {
+		unioned = append(unioned, docScores1[ind1:]...)
+	} else if ind2 != len(docScores2) {
+		unioned = append(unioned, docScores2[ind2:]...)
+	}
+	return
+}
+
+func not(docScores []index.DocScore, ids []int) (notDocScores []index.DocScore) {
+	ind1, ind2 := 0, 0
+	for ind1 != len(docScores) && ind2 != len(ids) {
+		if docScores[ind1].Id == ids[ind2] {
+			ind1 += 1
+			ind2 += 1
+		} else {
+			notDocScores = append(notDocScores,
+				index.DocScore{Id: ids[ind2], Score: 0})
+			ind2 += 1
+		}
+	}
+	for ind2 != len(ids) {
+		notDocScores = append(notDocScores,
+			index.DocScore{Id: ids[ind2], Score: 0})
+		ind2 += 1
 	}
 	return
 }

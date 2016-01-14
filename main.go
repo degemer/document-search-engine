@@ -28,8 +28,8 @@ func main() {
 		elapsed_load := time.Since(start_load)
 		log.Printf("Index load took %s", elapsed_load)
 
-		temp := search.New("vectorial", i)
-		req := `Preliminary Report-International Algebraic Language`
+		temp := search.New("boolean", i)
+		req := `report and international and not algebraic`
 		for i, res := range temp.Search(req) {
 			log.Println("Res", i, ":", res.Id, "-", res.Score)
 		}

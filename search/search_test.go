@@ -1,6 +1,7 @@
 package search
 
 import (
+	"github.com/degemer/document-search-engine/index"
 	"github.com/stretchr/testify/assert"
 	"testing"
 )
@@ -20,9 +21,30 @@ func TestBooleanPrefix(t *testing.T) {
 	assert.Equal(t, booleanPrefix(r4), prefixedR4)
 }
 
+func TestIntersect(t *testing.T) {
+	i1 := []index.DocScore{index.DocScore{Id: 1, Score: 5}, index.DocScore{Id: 3, Score: 4}, index.DocScore{Id: 4, Score: 2}}
+	i2 := []index.DocScore{index.DocScore{Id: 2, Score: 5}, index.DocScore{Id: 3, Score: 3}}
+	result := []index.DocScore{index.DocScore{Id: 3, Score: 7}}
+	assert.Equal(t, intersect(i1, i2), result)
+}
+
+func TestUnion(t *testing.T) {
+	i1 := []index.DocScore{index.DocScore{Id: 1, Score: 5}, index.DocScore{Id: 3, Score: 4}, index.DocScore{Id: 4, Score: 2}}
+	i2 := []index.DocScore{index.DocScore{Id: 2, Score: 5}, index.DocScore{Id: 3, Score: 3}}
+	result := []index.DocScore{index.DocScore{Id: 1, Score: 5}, index.DocScore{Id: 2, Score: 5}, index.DocScore{Id: 3, Score: 7}, index.DocScore{Id: 4, Score: 2}}
+	assert.Equal(t, union(i1, i2), result)
+}
+
+func TestNot(t *testing.T) {
+	docScores := []index.DocScore{index.DocScore{Id: 2, Score: 5}}
+	ids := []int{1, 2, 3, 4}
+	result := []index.DocScore{index.DocScore{Id: 1, Score: 0}, index.DocScore{Id: 3, Score: 0}, index.DocScore{Id: 4, Score: 0}}
+	assert.Equal(t, not(docScores, ids), result)
+}
+
 func BenchmarkBooleanPrefix(b *testing.B) {
-    r4 := "NOT (aaa AND bbb OR ccc) OR ddd AND (eee OR NOT fff)"
-    for i := 0; i < b.N; i++ {
+	r4 := "NOT (aaa AND bbb OR ccc) OR ddd AND (eee OR NOT fff)"
+	for i := 0; i < b.N; i++ {
 		booleanPrefix(r4)
-    }
+	}
 }
