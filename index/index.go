@@ -5,11 +5,14 @@ import (
 	"log"
 	"math"
 	"os"
+	"path/filepath"
 )
 
-const CHANNEL_SIZE int = 50
-const TFIDFFILE string = "tf-idf.index"
-const IDFFILE string = "tf-idf.idf"
+const (
+	CHANNEL_SIZE      int    = 50
+	INDICES_DIRECTORY string = "indices"
+	TFIDF             string = "tf-idf"
+)
 
 type Index interface {
 	Create()
@@ -81,10 +84,12 @@ func (ti *TfIdf) Create() {
 }
 
 func (ti *TfIdf) Load() {
-	ti.index = loadIndex(TFIDFFILE)
-	idfFile, err := os.Open(IDFFILE)
+	ti.index = loadIndex(TFIDF)
+	ti.ids = loadIds(TFIDF)
+	idfFilePath := filepath.Join(INDICES_DIRECTORY, TFIDF, "idf")
+	idfFile, err := os.Open(idfFilePath)
 	if err != nil {
-		log.Fatalln("Unable to open idf file ", IDFFILE, " : ", err)
+		log.Fatalln("Unable to open idf file ", idfFilePath, " : ", err)
 	}
 	idfEncoder := gob.NewDecoder(idfFile)
 	idfEncoder.Decode(&ti.idf)
@@ -92,10 +97,13 @@ func (ti *TfIdf) Load() {
 }
 
 func (ti *TfIdf) Save() {
-	saveIndex(TFIDFFILE, ti.index)
-	idfFile, err := os.Create(IDFFILE)
+	prepareSave(TFIDF)
+	saveIndex(TFIDF, ti.index)
+	saveIds(TFIDF, ti.ids)
+	idfFilePath := filepath.Join(INDICES_DIRECTORY, TFIDF, "idf")
+	idfFile, err := os.Create(idfFilePath)
 	if err != nil {
-		log.Fatalln("Unable to create idf file ", IDFFILE, " : ", err)
+		log.Fatalln("Unable to create idf file ", idfFilePath, " : ", err)
 	}
 	idfEncoder := gob.NewEncoder(idfFile)
 	idfEncoder.Encode(ti.idf)
@@ -165,25 +173,55 @@ func wordsTfFrequency(wordsCount map[string]int) map[string]float64 {
 	return wordsFrequency
 }
 
+func prepareSave(filePath string) {
+	os.MkdirAll(filepath.Join(INDICES_DIRECTORY, filePath), 0755)
+}
+
 func saveIndex(filePath string, index map[string][]DocScore) {
+	filePath = filepath.Join(INDICES_DIRECTORY, filePath, "index")
 	indexFile, err := os.Create(filePath)
 	if err != nil {
 		log.Fatalln("Unable to create index file ", filePath, " : ", err)
 	}
+	defer indexFile.Close()
 	indexEncoder := gob.NewEncoder(indexFile)
 	indexEncoder.Encode(index)
-	indexFile.Close()
+}
+
+func saveIds(filePath string, ids []int) {
+	filePath = filepath.Join(INDICES_DIRECTORY, filePath, "ids")
+	idsFile, err := os.Create(filePath)
+	if err != nil {
+		log.Fatalln("Unable to create ids file ", filePath, " : ", err)
+	}
+	defer idsFile.Close()
+	idsEncoder := gob.NewEncoder(idsFile)
+	idsEncoder.Encode(ids)
 }
 
 func loadIndex(filePath string) map[string][]DocScore {
+	filePath = filepath.Join(INDICES_DIRECTORY, filePath, "index")
 	index := make(map[string][]DocScore)
 	indexFile, err := os.Open(filePath)
 	if err != nil {
 		log.Fatalln("Unable to open index file ", filePath, " : ", err)
 	}
+	defer indexFile.Close()
 	indexEncoder := gob.NewDecoder(indexFile)
 	indexEncoder.Decode(&index)
-	indexFile.Close()
 
 	return index
+}
+
+func loadIds(filePath string) (ids []int) {
+	filePath = filepath.Join(INDICES_DIRECTORY, filePath, "ids")
+	idsFile, err := os.Open(filePath)
+	if err != nil {
+		log.Fatalln("Unable to open index file ", filePath, " : ", err)
+	}
+	defer idsFile.Close()
+	idsEncoder := gob.NewDecoder(idsFile)
+	idsEncoder.Decode(&ids)
+
+	return
 }
