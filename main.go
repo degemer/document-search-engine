@@ -18,9 +18,12 @@ func main() {
 		start_creation := time.Now()
 		i := index.New("tf-idf", map[string]string{"cacm_path": "cacm/cacm.all", "common_words_path": "cacm/common_words"})
 		i.Create()
-		i.Save()
 		elapsed_creation := time.Since(start_creation)
 		log.Printf("Index creation took %s", elapsed_creation)
+		start_save := time.Now()
+		i.Save()
+		elapsed_save := time.Since(start_save)
+		log.Printf("Index save took %s", elapsed_save)
 
 		start_load := time.Now()
 		j := index.New("tf-idf", map[string]string{"cacm_path": "cacm/cacm.all", "common_words_path": "cacm/common_words"})

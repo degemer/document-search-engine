@@ -28,6 +28,8 @@ type DocScore struct {
 	Score float64
 }
 
+type ByScore []DocScore
+
 type StandardIndex struct {
 	index     map[string][]DocScore
 	ids       []int
@@ -224,4 +226,10 @@ func loadIds(filePath string) (ids []int) {
 	idsEncoder.Decode(&ids)
 
 	return
+}
+
+func (r ByScore) Len() int      { return len(r) }
+func (r ByScore) Swap(i, j int) { r[i], r[j] = r[j], r[i] }
+func (r ByScore) Less(i, j int) bool {
+	return r[i].Score > r[j].Score || r[i].Score == r[j].Score && r[i].Id < r[j].Id
 }
