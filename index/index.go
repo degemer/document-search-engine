@@ -21,6 +21,8 @@ type Index interface {
 	Score(string) ScoredDocument
 	Get(string) []DocScore
 	GetAllIds() []int
+	GetSum(int) float64
+	GetSumSquared(int) float64
 }
 
 type DocScore struct {
@@ -33,7 +35,8 @@ type ByScore []DocScore
 type StandardIndex struct {
 	index     map[string][]DocScore
 	ids       []int
-	filePath  string
+	sums	  map[int]float64
+	sumsSquared map[int]float64
 	reader    Reader
 	tokenizer Tokenizer
 	filter    Filter
@@ -59,7 +62,6 @@ type IdfWords map[string]float64
 
 func New(name string, options map[string]string) Index {
 	temp := new(TfIdf)
-	temp.filePath = options["save_path"]
 	temp.reader = NewReader(options)
 	temp.tokenizer = NewTokenizer(options)
 	temp.filter = NewFilter(options)
@@ -76,32 +78,54 @@ func (ti *StandardIndex) GetIndex() map[string][]DocScore {
 }
 
 func (ti *StandardIndex) GetAllIds() []int {
+	if len(ti.ids) == 0 {
+		ti.ids = loadIds(TFIDF)
+	}
 	return ti.ids
+}
+
+func (ti *StandardIndex) GetSum(id int) float64 {
+	if len(ti.sums) == 0 {
+		ti.sums = loadSums(TFIDF, "sums")
+	}
+	return ti.sums[id]
+}
+
+func (ti *StandardIndex) GetSumSquared(id int) float64 {
+	if len(ti.sumsSquared) == 0 {
+		ti.sumsSquared = loadSums(TFIDF, "sumsSquared")
+	}
+	return ti.sumsSquared[id]
 }
 
 func (ti *TfIdf) Create() {
 	countedDocuments, wordsCountDoc := ti.counter.Count(ti.filter.Filter(ti.tokenizer.Tokenize(ti.reader.Read())))
 
-	ti.index, ti.idf, ti.ids = CreateTfIdf(countedDocuments, wordsCountDoc)
+	ti.index, ti.idf, ti.ids, ti.sums, ti.sumsSquared = CreateTfIdf(countedDocuments, wordsCountDoc)
 }
 
 func (ti *TfIdf) Load() {
 	ti.index = loadIndex(TFIDF)
-	ti.ids = loadIds(TFIDF)
-	idfFilePath := filepath.Join(INDICES_DIRECTORY, TFIDF, "idf")
-	idfFile, err := os.Open(idfFilePath)
-	if err != nil {
-		log.Fatalln("Unable to open idf file ", idfFilePath, " : ", err)
-	}
-	idfEncoder := gob.NewDecoder(idfFile)
-	idfEncoder.Decode(&ti.idf)
-	idfFile.Close()
 }
 
 func (ti *TfIdf) Save() {
 	prepareSave(TFIDF)
 	saveIndex(TFIDF, ti.index)
-	saveIds(TFIDF, ti.ids)
+	if len(ti.ids) != 0 {
+		saveIds(TFIDF, ti.ids)
+	}
+	if len(ti.idf) != 0 {
+		ti.saveIdf()
+	}
+	if len(ti.sums) != 0 {
+		saveSums(TFIDF, "sums", ti.sums)
+	}
+	if len(ti.sumsSquared) != 0 {
+		saveSums(TFIDF, "sumsSquared", ti.sumsSquared)
+	}
+}
+
+func (ti *TfIdf) saveIdf() {
 	idfFilePath := filepath.Join(INDICES_DIRECTORY, TFIDF, "idf")
 	idfFile, err := os.Create(idfFilePath)
 	if err != nil {
@@ -112,7 +136,21 @@ func (ti *TfIdf) Save() {
 	idfFile.Close()
 }
 
+func (ti *TfIdf) loadIdf() {
+	idfFilePath := filepath.Join(INDICES_DIRECTORY, TFIDF, "idf")
+	idfFile, err := os.Open(idfFilePath)
+	if err != nil {
+		log.Fatalln("Unable to open idf file ", idfFilePath, " : ", err)
+	}
+	idfEncoder := gob.NewDecoder(idfFile)
+	idfEncoder.Decode(&ti.idf)
+	idfFile.Close()
+}
+
 func (ti *TfIdf) Score(doc string) ScoredDocument {
+	if len(ti.idf) == 0 {
+		ti.loadIdf()
+	}
 	score := make(map[string]float64)
 	countedDocument := ti.counter.CountOne(ti.filter.FilterOne(ti.tokenizer.TokenizeOne(RawDocument{Id: 0, Content: doc})))
 	for word, freq := range wordsTfFrequency(countedDocument.WordsCount) {
@@ -148,7 +186,7 @@ func Idf(wordsCountDoc <-chan WordsCountDoc) <-chan IdfWords {
 	return idfWords
 }
 
-func CreateTfIdf(countedDocuments <-chan CountedDocument, wordsCountDoc <-chan WordsCountDoc) (map[string][]DocScore, IdfWords, []int) {
+func CreateTfIdf(countedDocuments <-chan CountedDocument, wordsCountDoc <-chan WordsCountDoc) (map[string][]DocScore, IdfWords, []int, map[int]float64, map[int]float64) {
 	tfDocuments := []TfDocument{}
 	idfWords := Idf(wordsCountDoc)
 	for tfDoc := range Tf(countedDocuments) {
@@ -158,13 +196,18 @@ func CreateTfIdf(countedDocuments <-chan CountedDocument, wordsCountDoc <-chan W
 	idfWord := <-idfWords
 	index := make(map[string][]DocScore)
 	ids := []int{}
+	sums := make(map[int]float64)
+	sumsSquared := make(map[int]float64)
 	for _, tfDoc := range tfDocuments {
 		ids = append(ids, tfDoc.Id)
 		for word, freq := range tfDoc.WordsFrequency {
-			index[word] = append(index[word], DocScore{Id: tfDoc.Id, Score: freq * idfWord[word]})
+			score := freq * idfWord[word]
+			index[word] = append(index[word], DocScore{Id: tfDoc.Id, Score: score})
+			sums[tfDoc.Id] += score
+			sumsSquared[tfDoc.Id] += score * score
 		}
 	}
-	return index, idfWord, ids
+	return index, idfWord, ids, sums, sumsSquared
 }
 
 func wordsTfFrequency(wordsCount map[string]int) map[string]float64 {
@@ -201,6 +244,17 @@ func saveIds(filePath string, ids []int) {
 	idsEncoder.Encode(ids)
 }
 
+func saveSums(filePath string, fileName string, sums map[int]float64) {
+	filePath = filepath.Join(INDICES_DIRECTORY, filePath, fileName)
+	sumsFile, err := os.Create(filePath)
+	if err != nil {
+		log.Fatalln("Unable to create ids file ", filePath, " : ", err)
+	}
+	defer sumsFile.Close()
+	idsEncoder := gob.NewEncoder(sumsFile)
+	idsEncoder.Encode(sums)
+}
+
 func loadIndex(filePath string) map[string][]DocScore {
 	filePath = filepath.Join(INDICES_DIRECTORY, filePath, "index")
 	index := make(map[string][]DocScore)
@@ -226,6 +280,20 @@ func loadIds(filePath string) (ids []int) {
 	idsEncoder.Decode(&ids)
 
 	return
+}
+
+func loadSums(filePath string, fileName string) map[int]float64 {
+	filePath = filepath.Join(INDICES_DIRECTORY, filePath, fileName)
+	sums := make(map[int]float64)
+	sumsFile, err := os.Open(filePath)
+	if err != nil {
+		log.Fatalln("Unable to open index file ", filePath, " : ", err)
+	}
+	defer sumsFile.Close()
+	idsEncoder := gob.NewDecoder(sumsFile)
+	idsEncoder.Decode(&sums)
+
+	return sums
 }
 
 func (r ByScore) Len() int      { return len(r) }

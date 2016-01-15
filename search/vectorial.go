@@ -13,19 +13,17 @@ type VectorialSearch struct {
 func (vs VectorialSearch) Search(request string) (result []index.DocScore) {
 	scoredReq := vs.Index.Score(request)
 	sumScoreReq := 0.0
-	sumScoreDocs := make(map[int]float64)
 	productScoreReqDocs := make(map[int]float64)
 	for word, score := range scoredReq.WordsFrequency {
 		sumScoreReq += score * score
 		for _, docScore := range vs.Index.Get(word) {
-			sumScoreDocs[docScore.Id] += docScore.Score * docScore.Score
 			productScoreReqDocs[docScore.Id] += docScore.Score * score
 		}
 	}
-	for id, sum := range sumScoreDocs {
+	for id, sum := range productScoreReqDocs {
 		result = append(
 			result,
-			index.DocScore{Id: id, Score: cosSim(productScoreReqDocs[id], sum, sumScoreReq)})
+			index.DocScore{Id: id, Score: cosSim(sum, vs.Index.GetSumSquared(id), sumScoreReq)})
 	}
 	sort.Sort(index.ByScore(result))
 	return

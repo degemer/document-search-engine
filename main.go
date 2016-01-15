@@ -31,8 +31,9 @@ func main() {
 		elapsed_load := time.Since(start_load)
 		log.Printf("Index load took %s", elapsed_load)
 
-		temp := search.New("boolean", i)
-		req := `report and international and not algebraic`
+		temp := search.New("vectorial", i)
+		req := `What articles exist which deal with TSS (Time Sharing System), an
+operating system for IBM computers?`
 		for i, res := range temp.Search(req) {
 			log.Println("Res", i, ":", res.Id, "-", res.Score)
 		}
