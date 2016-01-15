@@ -31,7 +31,7 @@ func (bs BooleanSearch) booleanScores(prefixed []string, pos int) ([]index.DocSc
 	case BOOL_AND:
 		docScores1, pos := bs.booleanScores(prefixed, pos+1)
 		docScores2, pos := bs.booleanScores(prefixed, pos)
-		return intersect(docScores1, docScores2), pos
+		return Intersect(docScores1, docScores2), pos
 	case BOOL_OR:
 		docScores1, pos := bs.booleanScores(prefixed, pos+1)
 		docScores2, pos := bs.booleanScores(prefixed, pos)
@@ -43,11 +43,11 @@ func (bs BooleanSearch) booleanScores(prefixed []string, pos int) ([]index.DocSc
 	return bs.Index.Get(prefixed[pos]), pos + 1
 }
 
-func intersect(docScores1 []index.DocScore, docScores2 []index.DocScore) (intersected []index.DocScore) {
+func Intersect(docScores1 []index.DocScore, docScores2 []index.DocScore) (Intersected []index.DocScore) {
 	ind1, ind2 := 0, 0
 	for ind1 != len(docScores1) && ind2 != len(docScores2) {
 		if docScores1[ind1].Id == docScores2[ind2].Id {
-			intersected = append(intersected,
+			Intersected = append(Intersected,
 				index.DocScore{Id: docScores1[ind1].Id,
 					Score: docScores1[ind1].Score + docScores2[ind2].Score})
 			ind1 += 1

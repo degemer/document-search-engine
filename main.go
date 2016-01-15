@@ -3,6 +3,7 @@ package main
 import (
 	"github.com/codegangsta/cli"
 	"github.com/degemer/document-search-engine/index"
+	"github.com/degemer/document-search-engine/measure"
 	"github.com/degemer/document-search-engine/search"
 	"log"
 	"os"
@@ -31,12 +32,12 @@ func main() {
 		elapsed_load := time.Since(start_load)
 		log.Printf("Index load took %s", elapsed_load)
 
-		temp := search.New("vectorial", i)
-		req := `What articles exist which deal with TSS (Time Sharing System), an
-operating system for IBM computers?`
-		for i, res := range temp.Search(req) {
-			log.Println("Res", i, ":", res.Id, "-", res.Score)
-		}
+		searcher := search.New("vectorial", i)
+		start_measure := time.Now()
+		measurer := measure.New("cacm", map[string]string{"cacm_path": "cacm"})
+		measurer.Measure(searcher)
+		elapsed_measure := time.Since(start_measure)
+		log.Printf("Measure took %s", elapsed_measure)
 	}
 	app.Run(os.Args)
 }

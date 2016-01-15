@@ -31,16 +31,17 @@ type DocScore struct {
 }
 
 type ByScore []DocScore
+type ById []DocScore
 
 type StandardIndex struct {
-	index     map[string][]DocScore
-	ids       []int
-	sums	  map[int]float64
+	index       map[string][]DocScore
+	ids         []int
+	sums        map[int]float64
 	sumsSquared map[int]float64
-	reader    Reader
-	tokenizer Tokenizer
-	filter    Filter
-	counter   Counter
+	reader      Reader
+	tokenizer   Tokenizer
+	filter      Filter
+	counter     Counter
 }
 
 type TfIdf struct {
@@ -300,4 +301,10 @@ func (r ByScore) Len() int      { return len(r) }
 func (r ByScore) Swap(i, j int) { r[i], r[j] = r[j], r[i] }
 func (r ByScore) Less(i, j int) bool {
 	return r[i].Score > r[j].Score || r[i].Score == r[j].Score && r[i].Id < r[j].Id
+}
+
+func (r ById) Len() int      { return len(r) }
+func (r ById) Swap(i, j int) { r[i], r[j] = r[j], r[i] }
+func (r ById) Less(i, j int) bool {
+	return r[i].Id < r[j].Id
 }

@@ -25,7 +25,7 @@ func TestIntersect(t *testing.T) {
 	i1 := []index.DocScore{index.DocScore{Id: 1, Score: 5}, index.DocScore{Id: 3, Score: 4}, index.DocScore{Id: 4, Score: 2}}
 	i2 := []index.DocScore{index.DocScore{Id: 2, Score: 5}, index.DocScore{Id: 3, Score: 3}}
 	result := []index.DocScore{index.DocScore{Id: 3, Score: 7}}
-	assert.Equal(t, intersect(i1, i2), result)
+	assert.Equal(t, Intersect(i1, i2), result)
 }
 
 func TestUnion(t *testing.T) {
