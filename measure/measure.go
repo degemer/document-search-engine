@@ -2,9 +2,9 @@ package measure
 
 import (
 	"bufio"
+	"fmt"
 	"github.com/degemer/document-search-engine/index"
 	"github.com/degemer/document-search-engine/search"
-	"log"
 	"os"
 	"path/filepath"
 	"sort"
@@ -22,8 +22,8 @@ type CacmMeasurer struct {
 
 func New(name string, options map[string]string) Measurer {
 	temp := new(CacmMeasurer)
-	temp.queries = loadQueries(options["cacm_path"])
-	temp.results = loadResults(options["cacm_path"])
+	temp.queries = loadQueries(options["cacm"])
+	temp.results = loadResults(options["cacm"])
 	return temp
 }
 
@@ -35,7 +35,7 @@ func (cm *CacmMeasurer) Measure(searcher search.Searcher) {
 		// copy(sortedIdResult, result)
 		// sort.Sort(index.ById(sortedIdResult))
 		// precision, rappel := precisionRappel(sortedIdResult, cm.results[query_id])
-		// log.Println(query_id,
+		// fmt.Println(query_id,
 		// 			precision,
 		// 			rappel,
 		// 			eMeasure(precision, rappel, 0.5),
@@ -44,7 +44,7 @@ func (cm *CacmMeasurer) Measure(searcher search.Searcher) {
 		meanAveragePrecision += averagePrecision(result, cm.results[query_id])
 	}
 	meanAveragePrecision /= float64(len(cm.queries))
-	log.Println("MAP:", meanAveragePrecision)
+	fmt.Println("MAP:", meanAveragePrecision)
 }
 
 func precisionRappel(result, expectedResult []index.DocScore) (precision, rappel float64) {
@@ -101,7 +101,7 @@ func inExpected(result index.DocScore, expectedResult []index.DocScore) bool {
 
 func loadQueries(cacmPath string) map[int]string {
 	queries := make(map[int]string)
-	reader := index.NewReader(map[string]string{"cacm_path": filepath.Join(cacmPath, "query.text")})
+	reader := index.NewReader(map[string]string{"cacm_file": filepath.Join(cacmPath, "query.text")})
 	for query := range reader.Read() {
 		queries[query.Id] = query.Content
 	}
@@ -113,7 +113,8 @@ func loadResults(cacmPath string) map[int][]index.DocScore {
 	resultsFilePath := filepath.Join(cacmPath, "qrels.text")
 	file, err := os.Open(resultsFilePath)
 	if err != nil {
-		log.Fatal(err)
+		fmt.Println(err)
+		os.Exit(1)
 	}
 
 	scanner := bufio.NewScanner(file)
@@ -121,11 +122,13 @@ func loadResults(cacmPath string) map[int][]index.DocScore {
 		text := scanner.Text()
 		query_id, err := strconv.Atoi(text[0:2])
 		if err != nil {
-			log.Fatalln("Unable to convert query id ", text[0:2], "to int: ", err)
+			fmt.Println("Unable to convert query id ", text[0:2], "to int: ", err)
+			os.Exit(1)
 		}
 		doc_id, err := strconv.Atoi(text[3:7])
 		if err != nil {
-			log.Fatalln("Unable to convert doc id ", text[3:7], "to int: ", err)
+			fmt.Println("Unable to convert doc id ", text[3:7], "to int: ", err)
+			os.Exit(1)
 		}
 		results[query_id] = append(results[query_id], index.DocScore{Id: doc_id})
 	}

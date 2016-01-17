@@ -2,8 +2,9 @@ package index
 
 import (
 	"bufio"
-	"log"
+	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 )
 
@@ -18,17 +19,17 @@ type FilteredDocument struct {
 }
 
 type CommonWordsFilter struct {
-	path        string
 	commonWords map[string]struct{}
 }
 
 func NewFilter(options map[string]string) Filter {
-	cwf := CommonWordsFilter{path: options["common_words_path"]}
+	cwf := CommonWordsFilter{}
 	cwf.commonWords = make(map[string]struct{})
 
-	file, err := os.Open(cwf.path)
+	file, err := os.Open(filepath.Join(options["cacm"], "common_words"))
 	if err != nil {
-		log.Fatal(err)
+		fmt.Println("Unable to open common_words file:", err)
+		os.Exit(1)
 	}
 
 	scanner := bufio.NewScanner(file)

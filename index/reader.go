@@ -3,8 +3,9 @@ package index
 import (
 	"bufio"
 	"bytes"
-	"log"
+	"fmt"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 )
@@ -24,7 +25,10 @@ type CacmReader struct {
 }
 
 func NewReader(options map[string]string) Reader {
-	return CacmReader{Path: options["cacm_path"]}
+	if options["cacm_file"] != "" {
+		return CacmReader{Path: filepath.Join(options["cacm_file"])}
+	}
+	return CacmReader{Path: filepath.Join(options["cacm"], "cacm.all")}
 }
 
 func (c CacmReader) Read() <-chan RawDocument {
@@ -34,7 +38,8 @@ func (c CacmReader) Read() <-chan RawDocument {
 func (c CacmReader) scanDatabase() <-chan string {
 	file, err := os.Open(c.Path)
 	if err != nil {
-		log.Fatal(err)
+		fmt.Println(err)
+		os.Exit(1)
 	}
 
 	scanner := bufio.NewScanner(file)
@@ -48,7 +53,8 @@ func (c CacmReader) scanDatabase() <-chan string {
 		file.Close()
 
 		if err := scanner.Err(); err != nil {
-			log.Fatalln("Error scanning file: ", err)
+			fmt.Println("Error scanning file: ", err)
+			os.Exit(1)
 		}
 		close(unparsedStrings)
 	}()
@@ -101,7 +107,8 @@ func cacmDoc(doc string) (int, string) {
 	}
 	id, err := strconv.Atoi(doc[3:indValues[0]])
 	if err != nil {
-		log.Fatalln("Unable to convert id ", doc[3:indValues[0]], "to int: ", err)
+		fmt.Println("Unable to convert id ", doc[3:indValues[0]], "to int: ", err)
+		os.Exit(1)
 	}
 
 	for i, val := range presentValues {
