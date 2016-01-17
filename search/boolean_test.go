@@ -48,3 +48,18 @@ func BenchmarkBooleanPrefix(b *testing.B) {
 		booleanPrefix(r4)
 	}
 }
+
+func BenchmarkBooleanSearch(b *testing.B) {
+	options := make(map[string]string)
+	options["cacm"] = "../cacm"
+	i := index.New("tf-idf", options)
+	if err := i.Load(); err != nil {
+		i.Create()
+	}
+	searcher := New("boolean", i)
+	request := "NOT (computer AND analysis OR ibm) OR language"
+	b.ResetTimer()
+	for ind := 0; ind < b.N; ind++ {
+		searcher.Search(request)
+	}
+}

@@ -79,23 +79,14 @@ func (ti *StandardIndex) GetIndex() map[string][]DocScore {
 }
 
 func (ti *StandardIndex) GetAllIds() []int {
-	if len(ti.ids) == 0 {
-		ti.ids = loadIds(TFIDF)
-	}
 	return ti.ids
 }
 
 func (ti *StandardIndex) GetSum(id int) float64 {
-	if len(ti.sums) == 0 {
-		ti.sums = loadSums(TFIDF, "sums")
-	}
 	return ti.sums[id]
 }
 
 func (ti *StandardIndex) GetSumSquared(id int) float64 {
-	if len(ti.sumsSquared) == 0 {
-		ti.sumsSquared = loadSums(TFIDF, "sumsSquared")
-	}
 	return ti.sumsSquared[id]
 }
 
@@ -107,6 +98,13 @@ func (ti *TfIdf) Create() {
 
 func (ti *TfIdf) Load() (err error) {
 	ti.index, err = loadIndex(TFIDF)
+	if err != nil {
+		return
+	}
+	ti.loadIdf()
+	ti.sumsSquared = loadSums(TFIDF, "sumsSquared")
+	ti.sums = loadSums(TFIDF, "sums")
+	ti.ids = loadIds(TFIDF)
 	return
 }
 
@@ -151,9 +149,6 @@ func (ti *TfIdf) loadIdf() {
 }
 
 func (ti *TfIdf) Score(doc string) ScoredDocument {
-	if len(ti.idf) == 0 {
-		ti.loadIdf()
-	}
 	score := make(map[string]float64)
 	countedDocument := ti.counter.CountOne(ti.filter.FilterOne(ti.tokenizer.TokenizeOne(RawDocument{Id: 0, Content: doc})))
 	for word, freq := range wordsTfFrequency(countedDocument.WordsCount) {
