@@ -12,6 +12,8 @@ const (
 	CHANNEL_SIZE      int    = 50
 	INDICES_DIRECTORY string = "indices"
 	TFIDF             string = "tf-idf"
+	TFIDFNORM         string = "tf-idf-norm"
+	TFNORM            string = "tf-norm"
 )
 
 type Index interface {
@@ -34,19 +36,28 @@ type ByScore []DocScore
 type ById []DocScore
 
 type StandardIndex struct {
-	index       map[string][]DocScore
-	ids         []int
-	sums        map[int]float64
-	sumsSquared map[int]float64
-	reader      Reader
-	tokenizer   Tokenizer
-	filter      Filter
-	counter     Counter
+	index         map[string][]DocScore
+	ids           []int
+	sums          map[int]float64
+	sumsSquared   map[int]float64
+	reader        Reader
+	tokenizer     Tokenizer
+	filter        Filter
+	counter       Counter
+	saveDirectory string
 }
 
 type TfIdf struct {
 	StandardIndex
 	idf IdfWords
+}
+
+type TfIdfNorm struct {
+	TfIdf
+}
+
+type TfNorm struct {
+	StandardIndex
 }
 
 type TfDocument struct {
@@ -62,12 +73,39 @@ type ScoredDocument struct {
 type IdfWords map[string]float64
 
 func New(name string, options map[string]string) Index {
+	switch name {
+	case "tf-idf-norm":
+		temp := new(TfIdfNorm)
+		temp.reader = NewReader(options)
+		temp.tokenizer = NewTokenizer(options)
+		temp.filter = NewFilter(options)
+		temp.counter = NewCounter(options)
+		temp.saveDirectory = filepath.Join(INDICES_DIRECTORY, TFIDFNORM)
+		return temp
+	case "tf-norm":
+		temp := new(TfNorm)
+		temp.reader = NewReader(options)
+		temp.tokenizer = NewTokenizer(options)
+		temp.filter = NewFilter(options)
+		temp.counter = NewCounter(options)
+		temp.saveDirectory = filepath.Join(INDICES_DIRECTORY, TFNORM)
+		return temp
+	}
 	temp := new(TfIdf)
 	temp.reader = NewReader(options)
 	temp.tokenizer = NewTokenizer(options)
 	temp.filter = NewFilter(options)
 	temp.counter = NewCounter(options)
+	temp.saveDirectory = filepath.Join(INDICES_DIRECTORY, TFIDF)
+
 	return temp
+}
+
+func prepareIndex(st StandardIndex, options map[string]string) {
+	st.reader = NewReader(options)
+	st.tokenizer = NewTokenizer(options)
+	st.filter = NewFilter(options)
+	st.counter = NewCounter(options)
 }
 
 func (ti *StandardIndex) Get(word string) []DocScore {
@@ -96,37 +134,103 @@ func (ti *TfIdf) Create() {
 	ti.index, ti.idf, ti.ids, ti.sums, ti.sumsSquared = CreateTfIdf(countedDocuments, wordsCountDoc)
 }
 
+func (ti *TfIdfNorm) Create() {
+	countedDocuments, wordsCountDoc := ti.counter.Count(ti.filter.Filter(ti.tokenizer.Tokenize(ti.reader.Read())))
+
+	ti.index, ti.idf, ti.ids, _, ti.sumsSquared = CreateTfIdf(countedDocuments, wordsCountDoc)
+	ti.sums = make(map[int]float64)
+	for word, docScores := range ti.index {
+		for i, docScore := range docScores {
+			ti.index[word][i] = DocScore{Id: docScore.Id, Score: docScore.Score / math.Sqrt(ti.sumsSquared[docScore.Id])}
+			ti.sums[docScore.Id] += ti.index[word][i].Score
+		}
+	}
+	ti.sumsSquared = make(map[int]float64)
+}
+
+func (ti *TfNorm) Create() {
+	countedDocuments, _ := ti.counter.Count(ti.filter.Filter(ti.tokenizer.Tokenize(ti.reader.Read())))
+	tfDocuments := Tf(countedDocuments)
+	ti.index = make(map[string][]DocScore)
+	ti.sums = make(map[int]float64)
+	ti.sumsSquared = make(map[int]float64)
+	for tfDoc := range tfDocuments {
+		ti.ids = append(ti.ids, tfDoc.Id)
+		max := 0.0
+		for _, freq := range tfDoc.WordsFrequency {
+			if freq > max {
+				max = freq
+			}
+		}
+		for word, freq := range tfDoc.WordsFrequency {
+			score := freq / max
+			ti.index[word] = append(ti.index[word], DocScore{Id: tfDoc.Id, Score: score})
+			ti.sums[tfDoc.Id] += score
+			ti.sumsSquared[tfDoc.Id] += score * score
+		}
+	}
+}
+
+func (ti *TfIdfNorm) GetSumSquared(id int) float64 {
+	return 1
+}
+
 func (ti *TfIdf) Load() (err error) {
-	ti.index, err = loadIndex(TFIDF)
+	ti.index, err = loadIndex(ti.saveDirectory)
 	if err != nil {
 		return
 	}
 	ti.loadIdf()
-	ti.sumsSquared = loadSums(TFIDF, "sumsSquared")
-	ti.sums = loadSums(TFIDF, "sums")
-	ti.ids = loadIds(TFIDF)
+	ti.sumsSquared = loadSums(ti.saveDirectory, "sumsSquared")
+	ti.sums = loadSums(ti.saveDirectory, "sums")
+	ti.ids = loadIds(ti.saveDirectory)
+	return
+}
+
+func (ti *TfNorm) Load() (err error) {
+	ti.index, err = loadIndex(ti.saveDirectory)
+	if err != nil {
+		return
+	}
+	ti.sumsSquared = loadSums(ti.saveDirectory, "sumsSquared")
+	ti.sums = loadSums(ti.saveDirectory, "sums")
+	ti.ids = loadIds(ti.saveDirectory)
 	return
 }
 
 func (ti *TfIdf) Save() {
-	prepareSave(TFIDF)
-	saveIndex(TFIDF, ti.index)
+	prepareSave(ti.saveDirectory)
+	saveIndex(ti.saveDirectory, ti.index)
 	if len(ti.ids) != 0 {
-		saveIds(TFIDF, ti.ids)
+		saveIds(ti.saveDirectory, ti.ids)
 	}
 	if len(ti.idf) != 0 {
 		ti.saveIdf()
 	}
 	if len(ti.sums) != 0 {
-		saveSums(TFIDF, "sums", ti.sums)
+		saveSums(ti.saveDirectory, "sums", ti.sums)
 	}
 	if len(ti.sumsSquared) != 0 {
-		saveSums(TFIDF, "sumsSquared", ti.sumsSquared)
+		saveSums(ti.saveDirectory, "sumsSquared", ti.sumsSquared)
+	}
+}
+
+func (ti *TfNorm) Save() {
+	prepareSave(ti.saveDirectory)
+	saveIndex(ti.saveDirectory, ti.index)
+	if len(ti.ids) != 0 {
+		saveIds(ti.saveDirectory, ti.ids)
+	}
+	if len(ti.sums) != 0 {
+		saveSums(ti.saveDirectory, "sums", ti.sums)
+	}
+	if len(ti.sumsSquared) != 0 {
+		saveSums(ti.saveDirectory, "sumsSquared", ti.sumsSquared)
 	}
 }
 
 func (ti *TfIdf) saveIdf() {
-	idfFilePath := filepath.Join(INDICES_DIRECTORY, TFIDF, "idf")
+	idfFilePath := filepath.Join(ti.saveDirectory, "idf")
 	idfFile, err := os.Create(idfFilePath)
 	if err != nil {
 		fmt.Println("Unable to create idf file ", idfFilePath, " : ", err)
@@ -137,7 +241,7 @@ func (ti *TfIdf) saveIdf() {
 }
 
 func (ti *TfIdf) loadIdf() {
-	idfFilePath := filepath.Join(INDICES_DIRECTORY, TFIDF, "idf")
+	idfFilePath := filepath.Join(ti.saveDirectory, "idf")
 	idfFile, err := os.Open(idfFilePath)
 	if err != nil {
 		fmt.Println("Unable to open idf file ", idfFilePath, " : ", err)
@@ -154,6 +258,37 @@ func (ti *TfIdf) Score(doc string) ScoredDocument {
 	for word, freq := range wordsTfFrequency(countedDocument.WordsCount) {
 		score[word] = freq * ti.idf[word]
 	}
+	return ScoredDocument{Id: countedDocument.Id, WordsFrequency: score}
+}
+
+func (ti *TfIdfNorm) Score(doc string) ScoredDocument {
+	score := make(map[string]float64)
+	countedDocument := ti.counter.CountOne(ti.filter.FilterOne(ti.tokenizer.TokenizeOne(RawDocument{Id: 0, Content: doc})))
+	sumSquared := 0.0
+	for word, freq := range wordsTfFrequency(countedDocument.WordsCount) {
+		score[word] = freq * ti.idf[word]
+		sumSquared += score[word]
+	}
+	for word, _ := range score {
+		score[word] /= math.Sqrt(sumSquared)
+	}
+	return ScoredDocument{Id: countedDocument.Id, WordsFrequency: score}
+}
+
+func (ti *TfNorm) Score(doc string) ScoredDocument {
+	score := make(map[string]float64)
+	countedDocument := ti.counter.CountOne(ti.filter.FilterOne(ti.tokenizer.TokenizeOne(RawDocument{Id: 0, Content: doc})))
+	max := 0.0
+	for word, freq := range wordsTfFrequency(countedDocument.WordsCount) {
+		score[word] = freq
+		if freq > max {
+			max = freq
+		}
+	}
+	for word, _ := range score {
+		score[word] /= max
+	}
+
 	return ScoredDocument{Id: countedDocument.Id, WordsFrequency: score}
 }
 
@@ -217,11 +352,11 @@ func wordsTfFrequency(wordsCount map[string]int) map[string]float64 {
 }
 
 func prepareSave(filePath string) {
-	os.MkdirAll(filepath.Join(INDICES_DIRECTORY, filePath), 0755)
+	os.MkdirAll(filePath, 0755)
 }
 
 func saveIndex(filePath string, index map[string][]DocScore) {
-	filePath = filepath.Join(INDICES_DIRECTORY, filePath, "index")
+	filePath = filepath.Join(filePath, "index")
 	indexFile, err := os.Create(filePath)
 	if err != nil {
 		fmt.Println("Unable to create index file ", filePath, " : ", err)
@@ -233,7 +368,7 @@ func saveIndex(filePath string, index map[string][]DocScore) {
 }
 
 func saveIds(filePath string, ids []int) {
-	filePath = filepath.Join(INDICES_DIRECTORY, filePath, "ids")
+	filePath = filepath.Join(filePath, "ids")
 	idsFile, err := os.Create(filePath)
 	if err != nil {
 		fmt.Println("Unable to create ids file ", filePath, " : ", err)
@@ -245,7 +380,7 @@ func saveIds(filePath string, ids []int) {
 }
 
 func saveSums(filePath string, fileName string, sums map[int]float64) {
-	filePath = filepath.Join(INDICES_DIRECTORY, filePath, fileName)
+	filePath = filepath.Join(filePath, fileName)
 	sumsFile, err := os.Create(filePath)
 	if err != nil {
 		fmt.Println("Unable to create ids file ", filePath, " : ", err)
@@ -257,7 +392,7 @@ func saveSums(filePath string, fileName string, sums map[int]float64) {
 }
 
 func loadIndex(filePath string) (map[string][]DocScore, error) {
-	filePath = filepath.Join(INDICES_DIRECTORY, filePath, "index")
+	filePath = filepath.Join(filePath, "index")
 	index := make(map[string][]DocScore)
 	indexFile, err := os.Open(filePath)
 	if err != nil {
