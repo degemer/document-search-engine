@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"sort"
 	"strconv"
+	"time"
 )
 
 type Measurer interface {
@@ -32,8 +33,11 @@ func (cm *CacmMeasurer) Measure(searcher search.Searcher) {
 	mins := []float64{10, 10, 10, 10, 10}
 	maxs := make([]float64, 5)
 	sums := make([]float64, 5)
+	searchTime := 0.0
 	for query_id, request := range cm.queries {
+		now := time.Now()
 		result := searcher.Search(request)
+		searchTime += float64(time.Since(now) / time.Microsecond)
 		precision, rappel := precisionRappel(result, cm.results[query_id])
 		minMaxSum(mins, maxs, sums, precision, 0)
 		minMaxSum(mins, maxs, sums, rappel, 1)
@@ -43,6 +47,8 @@ func (cm *CacmMeasurer) Measure(searcher search.Searcher) {
 		meanAveragePrecision += averagePrecision(result, cm.results[query_id])
 	}
 	nbTests := float64(len(cm.queries))
+	fmt.Println("Tested with", len(cm.queries), "requests")
+	fmt.Println("Average search time -", searchTime/nbTests, "µs")
 	fmt.Println("Precision - min:", mins[0], "max:", maxs[0], "avg:", sums[0]/nbTests)
 	fmt.Println("Rappel - min:", mins[1], "max:", maxs[1], "avg:", sums[1]/nbTests)
 	fmt.Println("E-Measure - min:", mins[2], "max:", maxs[2], "avg:", sums[2]/nbTests)
