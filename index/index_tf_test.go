@@ -15,24 +15,6 @@ func TestWordsTfFrequency(t *testing.T) {
 	assert.Equal(t, wordsTfFrequency(wordsCount), expectedTfFrequency, "Incorrect frequency")
 }
 
-func BenchmarkTfIdfCreate(b *testing.B) {
-	options := make(map[string]string)
-	options["cacm"] = "../cacm"
-	for ind := 0; ind < b.N; ind++ {
-		i := New("tf-idf", options)
-		i.Create()
-	}
-}
-
-func BenchmarkTfIdfNormCreate(b *testing.B) {
-	options := make(map[string]string)
-	options["cacm"] = "../cacm"
-	for ind := 0; ind < b.N; ind++ {
-		i := New("tf-idf-norm", options)
-		i.Create()
-	}
-}
-
 func BenchmarkTfNormCreate(b *testing.B) {
 	options := make(map[string]string)
 	options["cacm"] = "../cacm"
