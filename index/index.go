@@ -187,6 +187,17 @@ func (ti *TfIdf) Load() (err error) {
 	return
 }
 
+func (ti *TfIdfNorm) Load() (err error) {
+	ti.index, err = loadIndex(ti.saveDirectory)
+	if err != nil {
+		return
+	}
+	ti.loadIdf()
+	ti.sums = loadSums(ti.saveDirectory, "sums")
+	ti.ids = loadIds(ti.saveDirectory)
+	return
+}
+
 func (ti *TfNorm) Load() (err error) {
 	ti.index, err = loadIndex(ti.saveDirectory)
 	if err != nil {
@@ -406,7 +417,7 @@ func loadIndex(filePath string) (map[string][]DocScore, error) {
 }
 
 func loadIds(filePath string) (ids []int) {
-	filePath = filepath.Join(INDICES_DIRECTORY, filePath, "ids")
+	filePath = filepath.Join(filePath, "ids")
 	idsFile, err := os.Open(filePath)
 	if err != nil {
 		fmt.Println("Unable to open index file ", filePath, " : ", err)
@@ -420,7 +431,7 @@ func loadIds(filePath string) (ids []int) {
 }
 
 func loadSums(filePath string, fileName string) map[int]float64 {
-	filePath = filepath.Join(INDICES_DIRECTORY, filePath, fileName)
+	filePath = filepath.Join(filePath, fileName)
 	sums := make(map[int]float64)
 	sumsFile, err := os.Open(filePath)
 	if err != nil {

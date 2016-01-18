@@ -29,26 +29,39 @@ func New(name string, options map[string]string) Measurer {
 
 func (cm *CacmMeasurer) Measure(searcher search.Searcher) {
 	meanAveragePrecision := 0.0
+	mins := []float64{10, 10, 10, 10, 10}
+	maxs := make([]float64, 5)
+	sums := make([]float64, 5)
 	for query_id, request := range cm.queries {
 		result := searcher.Search(request)
-		// sortedIdResult := make([]index.DocScore, len(result))
-		// copy(sortedIdResult, result)
-		// sort.Sort(index.ById(sortedIdResult))
-		// precision, rappel := precisionRappel(sortedIdResult, cm.results[query_id])
-		// fmt.Println(query_id,
-		// 			precision,
-		// 			rappel,
-		// 			eMeasure(precision, rappel, 0.5),
-		// 			fMeasure(precision, rappel, 1),
-		// 			rPrecision(sortedIdResult, cm.results[query_id]))
+		precision, rappel := precisionRappel(result, cm.results[query_id])
+		minMaxSum(mins, maxs, sums, precision, 0)
+		minMaxSum(mins, maxs, sums, rappel, 1)
+		minMaxSum(mins, maxs, sums, eMeasure(precision, rappel, 0.5), 2)
+		minMaxSum(mins, maxs, sums, fMeasure(precision, rappel, 1), 3)
+		minMaxSum(mins, maxs, sums, rPrecision(result, cm.results[query_id]), 4)
 		meanAveragePrecision += averagePrecision(result, cm.results[query_id])
 	}
-	meanAveragePrecision /= float64(len(cm.queries))
-	fmt.Println("MAP:", meanAveragePrecision)
+	nbTests := float64(len(cm.queries))
+	fmt.Println("Precision - min:", mins[0], "max:", maxs[0], "avg:", sums[0]/nbTests)
+	fmt.Println("Rappel - min:", mins[1], "max:", maxs[1], "avg:", sums[1]/nbTests)
+	fmt.Println("E-Measure - min:", mins[2], "max:", maxs[2], "avg:", sums[2]/nbTests)
+	fmt.Println("F-Measure - min:", mins[3], "max:", maxs[3], "avg:", sums[3]/nbTests)
+	fmt.Println("R-Measure - min:", mins[4], "max:", maxs[4], "avg:", sums[4]/nbTests)
+	fmt.Println("MAP -", meanAveragePrecision/nbTests)
+}
+
+func minMaxSum(mins, maxs, sums []float64, measure float64, ind int) {
+	if measure < mins[ind] {
+		mins[ind] = measure
+	} else if measure > maxs[ind] {
+		maxs[ind] = measure
+	}
+	sums[ind] += measure
 }
 
 func precisionRappel(result, expectedResult []index.DocScore) (precision, rappel float64) {
-	pertinentDocsFound := search.Intersect(result, expectedResult)
+	pertinentDocsFound := intersect(result, expectedResult)
 	precision = float64(len(pertinentDocsFound)) / float64(len(result))
 	rappel = float64(len(pertinentDocsFound)) / float64(len(expectedResult))
 	if len(result) == 0 && len(expectedResult) == 0 {
@@ -62,6 +75,19 @@ func precisionRappel(result, expectedResult []index.DocScore) (precision, rappel
 	return
 }
 
+func intersect(result, expectedResult []index.DocScore) (intersection []int) {
+	resultMap := make(map[int]int)
+	for _, docScore := range result {
+		resultMap[docScore.Id] = 1
+	}
+	for _, docScore := range expectedResult {
+		if resultMap[docScore.Id] == 1 {
+			intersection = append(intersection, docScore.Id)
+		}
+	}
+	return
+}
+
 func eMeasure(precision, rappel, alpha float64) float64 {
 	return 1 - 1/(alpha/precision+(1-alpha)/rappel)
 }
@@ -71,7 +97,11 @@ func fMeasure(precision, rappel, beta float64) float64 {
 }
 
 func rPrecision(result, expectedResult []index.DocScore) (rPrecision float64) {
-	return precisionK(result, expectedResult, len(expectedResult))
+	k := len(expectedResult)
+	if k == 0 {
+		k = 1
+	}
+	return precisionK(result, expectedResult, k)
 }
 
 func precisionK(result, expectedResult []index.DocScore, k int) (rPrecision float64) {
