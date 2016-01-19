@@ -88,7 +88,7 @@ func main() {
 				searcher := search.New(search_name, i)
 
 				reader := bufio.NewReader(os.Stdin)
-				fmt.Println("Enter request: ")
+				fmt.Println("Enter request (empty request to exit): ")
 				req, _ := reader.ReadString('\n')
 				for req != "\n" {
 					start_search := time.Now()
