@@ -38,7 +38,7 @@ func TestUnion(t *testing.T) {
 func TestNot(t *testing.T) {
 	docScores := []index.DocScore{index.DocScore{Id: 2, Score: 5}}
 	ids := []int{1, 2, 3, 4}
-	result := []index.DocScore{index.DocScore{Id: 1, Score: 0}, index.DocScore{Id: 3, Score: 0}, index.DocScore{Id: 4, Score: 0}}
+	result := []index.DocScore{index.DocScore{Id: 1, Score: 1. / 3.}, index.DocScore{Id: 3, Score: 1. / 3.}, index.DocScore{Id: 4, Score: 1. / 3.}}
 	assert.Equal(t, not(docScores, ids), result)
 }
 

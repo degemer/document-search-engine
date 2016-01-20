@@ -18,6 +18,21 @@ func New(name string, ind index.Index) Searcher {
 		temp := new(BooleanSearch)
 		temp.Index = ind
 		return temp
+	case name == "vectorial-dice":
+		temp := new(VectorialSearchSum)
+		temp.score = dice
+		temp.Index = ind
+		return temp
+	case name == "vectorial-jaccard":
+		temp := new(VectorialSearchSum)
+		temp.score = jaccard
+		temp.Index = ind
+		return temp
+	case name == "vectorial-overlap":
+		temp := new(VectorialSearchSum)
+		temp.score = overlap
+		temp.Index = ind
+		return temp
 	}
 	temp := new(VectorialSearch)
 	temp.Index = ind

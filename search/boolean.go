@@ -94,13 +94,13 @@ func not(docScores []index.DocScore, ids []int) (notDocScores []index.DocScore) 
 			ind2 += 1
 		} else {
 			notDocScores = append(notDocScores,
-				index.DocScore{Id: ids[ind2], Score: 1.0/float64(len(ids) - len(docScores))})
+				index.DocScore{Id: ids[ind2], Score: 1.0 / float64(len(ids)-len(docScores))})
 			ind2 += 1
 		}
 	}
 	for ind2 != len(ids) {
 		notDocScores = append(notDocScores,
-			index.DocScore{Id: ids[ind2], Score: 0})
+			index.DocScore{Id: ids[ind2], Score: 1.0 / float64(len(ids)-len(docScores))})
 		ind2 += 1
 	}
 	return
