@@ -23,3 +23,12 @@ func BenchmarkTfNormCreate(b *testing.B) {
 		i.Create()
 	}
 }
+
+func BenchmarkTfNormStemCreate(b *testing.B) {
+	options := make(map[string]string)
+	options["cacm"] = "../cacm"
+	for ind := 0; ind < b.N; ind++ {
+		i := New("tf-norm-stem", options)
+		i.Create()
+	}
+}

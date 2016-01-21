@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 )
 
 const (
@@ -41,6 +42,7 @@ type StandardIndex struct {
 	reader        Reader
 	tokenizer     Tokenizer
 	filter        Filter
+	stemmer       Stemmer
 	counter       Counter
 	saveDirectory string
 }
@@ -58,32 +60,46 @@ type ScoredDocument struct {
 type IdfWords map[string]float64
 
 func New(name string, options map[string]string) Index {
+	if strings.HasSuffix(name, "-stem") {
+		options["stemmer"] = "stem"
+		name = name[:len(name)-5]
+	}
 	switch name {
 	case "tf-idf-norm":
 		temp := new(TfIdfNorm)
 		temp.reader = NewReader(options)
 		temp.tokenizer = NewTokenizer(options)
 		temp.filter = NewFilter(options)
+		temp.stemmer = NewStemmer(options)
 		temp.counter = NewCounter(options)
-		temp.saveDirectory = filepath.Join(INDICES_DIRECTORY, TFIDFNORM)
+		temp.saveDirectory = saveDirectory(TFIDFNORM, options)
 		return temp
 	case "tf-norm":
 		temp := new(TfNorm)
 		temp.reader = NewReader(options)
 		temp.tokenizer = NewTokenizer(options)
 		temp.filter = NewFilter(options)
+		temp.stemmer = NewStemmer(options)
 		temp.counter = NewCounter(options)
-		temp.saveDirectory = filepath.Join(INDICES_DIRECTORY, TFNORM)
+		temp.saveDirectory = saveDirectory(TFNORM, options)
 		return temp
 	}
 	temp := new(TfIdf)
 	temp.reader = NewReader(options)
 	temp.tokenizer = NewTokenizer(options)
 	temp.filter = NewFilter(options)
+	temp.stemmer = NewStemmer(options)
 	temp.counter = NewCounter(options)
-	temp.saveDirectory = filepath.Join(INDICES_DIRECTORY, TFIDF)
+	temp.saveDirectory = saveDirectory(TFIDF, options)
 
 	return temp
+}
+
+func saveDirectory(name string, options map[string]string) string {
+	if options["stemmer"] == "stem" {
+		name += "-stem"
+	}
+	return filepath.Join(INDICES_DIRECTORY, name)
 }
 
 func (ti *StandardIndex) Get(word string) []DocScore {

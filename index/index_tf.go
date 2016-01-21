@@ -9,7 +9,7 @@ type TfNorm struct {
 }
 
 func (ti *TfNorm) Create() {
-	countedDocuments, _ := ti.counter.Count(ti.filter.Filter(ti.tokenizer.Tokenize(ti.reader.Read())))
+	countedDocuments, _ := ti.counter.Count(ti.filter.Filter(ti.stemmer.Stem(ti.filter.Filter(ti.tokenizer.Tokenize(ti.reader.Read())))))
 	tfDocuments := Tf(countedDocuments)
 	ti.index = make(map[string][]DocScore)
 	ti.sums = make(map[int]float64)
@@ -58,7 +58,7 @@ func (ti *TfNorm) Save() {
 
 func (ti *TfNorm) Score(doc string) ScoredDocument {
 	score := make(map[string]float64)
-	countedDocument := ti.counter.CountOne(ti.filter.FilterOne(ti.tokenizer.TokenizeOne(RawDocument{Id: 0, Content: doc})))
+	countedDocument := ti.counter.CountOne(ti.filter.FilterOne(ti.stemmer.StemOne(ti.filter.FilterOne(ti.tokenizer.TokenizeOne(RawDocument{Id: 0, Content: doc})))))
 	max := 0.0
 	for word, freq := range wordsTfFrequency(countedDocument.WordsCount) {
 		score[word] = freq
