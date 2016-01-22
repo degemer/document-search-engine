@@ -7,8 +7,13 @@ import (
 const STEMMER_WORKERS = 2
 
 type Stemmer interface {
-	Stem(<-chan FilteredDocument) <-chan TokenizedDocument
-	StemOne(FilteredDocument) TokenizedDocument
+	Stem(<-chan FilteredDocument) <-chan StemmedDocument
+	StemOne(FilteredDocument) StemmedDocument
+}
+
+type StemmedDocument struct {
+	Id    int
+	Words []string
 }
 
 type NoStemmer struct{}
@@ -21,8 +26,8 @@ func NewStemmer(options map[string]string) Stemmer {
 	return NoStemmer{}
 }
 
-func (ns NoStemmer) Stem(filteredDocuments <-chan FilteredDocument) <-chan TokenizedDocument {
-	stemmedDocuments := make(chan TokenizedDocument, CHANNEL_SIZE)
+func (ns NoStemmer) Stem(filteredDocuments <-chan FilteredDocument) <-chan StemmedDocument {
+	stemmedDocuments := make(chan StemmedDocument, CHANNEL_SIZE)
 	go func() {
 		for r := range filteredDocuments {
 			stemmedDocuments <- ns.StemOne(r)
@@ -32,12 +37,12 @@ func (ns NoStemmer) Stem(filteredDocuments <-chan FilteredDocument) <-chan Token
 	return stemmedDocuments
 }
 
-func (ns NoStemmer) StemOne(r FilteredDocument) TokenizedDocument {
-	return TokenizedDocument{Id: r.Id, Words: r.Words}
+func (ns NoStemmer) StemOne(r FilteredDocument) StemmedDocument {
+	return StemmedDocument{Id: r.Id, Words: r.Words}
 }
 
-func (ps PorterStemmer) Stem(filteredDocuments <-chan FilteredDocument) <-chan TokenizedDocument {
-	stemmedDocuments := make(chan TokenizedDocument, CHANNEL_SIZE)
+func (ps PorterStemmer) Stem(filteredDocuments <-chan FilteredDocument) <-chan StemmedDocument {
+	stemmedDocuments := make(chan StemmedDocument, CHANNEL_SIZE)
 	stemmedChannel := make(chan bool)
 
 	for i := 1; i <= STEMMER_WORKERS; i++ {
@@ -57,8 +62,8 @@ func (ps PorterStemmer) Stem(filteredDocuments <-chan FilteredDocument) <-chan T
 	return stemmedDocuments
 }
 
-func (ps PorterStemmer) StemOne(r FilteredDocument) TokenizedDocument {
-	return TokenizedDocument{Id: r.Id, Words: porter(r.Words)}
+func (ps PorterStemmer) StemOne(r FilteredDocument) StemmedDocument {
+	return StemmedDocument{Id: r.Id, Words: porter(r.Words)}
 }
 
 func porter(words []string) (stemmedWords []string) {

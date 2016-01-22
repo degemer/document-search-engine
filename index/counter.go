@@ -1,8 +1,8 @@
 package index
 
 type Counter interface {
-	Count(<-chan FilteredDocument) (<-chan CountedDocument, <-chan WordsCountDoc)
-	CountOne(FilteredDocument) CountedDocument
+	Count(<-chan StemmedDocument) (<-chan CountedDocument, <-chan WordsCountDoc)
+	CountOne(StemmedDocument) CountedDocument
 }
 
 type CountedDocument struct {
@@ -21,13 +21,13 @@ func NewCounter(options map[string]string) Counter {
 	return StandardCounter{}
 }
 
-func (sc StandardCounter) Count(filteredDocuments <-chan FilteredDocument) (<-chan CountedDocument, <-chan WordsCountDoc) {
+func (sc StandardCounter) Count(stemmedDocuments <-chan StemmedDocument) (<-chan CountedDocument, <-chan WordsCountDoc) {
 	countedDocuments := make(chan CountedDocument, CHANNEL_SIZE)
 	wordsCountDoc := make(chan WordsCountDoc)
 	N := 0
 	wordsOccurences := map[string]int{}
 	go func() {
-		for f := range filteredDocuments {
+		for f := range stemmedDocuments {
 			N += 1
 			wordsCount := countWords(f.Words)
 			countedDocuments <- CountedDocument{Id: f.Id, WordsCount: wordsCount}
@@ -43,7 +43,7 @@ func (sc StandardCounter) Count(filteredDocuments <-chan FilteredDocument) (<-ch
 	return countedDocuments, wordsCountDoc
 }
 
-func (sc StandardCounter) CountOne(f FilteredDocument) CountedDocument {
+func (sc StandardCounter) CountOne(f StemmedDocument) CountedDocument {
 	return CountedDocument{Id: f.Id, WordsCount: countWords(f.Words)}
 }
 

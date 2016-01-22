@@ -18,13 +18,13 @@ type TfIdfNorm struct {
 }
 
 func (ti *TfIdf) Create() {
-	countedDocuments, wordsCountDoc := ti.counter.Count(ti.filter.Filter(ti.stemmer.Stem(ti.filter.Filter(ti.tokenizer.Tokenize(ti.reader.Read())))))
+	countedDocuments, wordsCountDoc := ti.counter.Count(ti.stemmer.Stem(ti.filter.Filter(ti.tokenizer.Tokenize(ti.reader.Read()))))
 
 	ti.index, ti.idf, ti.ids, ti.sums, ti.sumsSquared = CreateTfIdf(countedDocuments, wordsCountDoc)
 }
 
 func (ti *TfIdfNorm) Create() {
-	countedDocuments, wordsCountDoc := ti.counter.Count(ti.filter.Filter(ti.stemmer.Stem(ti.filter.Filter(ti.tokenizer.Tokenize(ti.reader.Read())))))
+	countedDocuments, wordsCountDoc := ti.counter.Count(ti.stemmer.Stem(ti.filter.Filter(ti.tokenizer.Tokenize(ti.reader.Read()))))
 
 	ti.index, ti.idf, ti.ids, _, ti.sumsSquared = CreateTfIdf(countedDocuments, wordsCountDoc)
 	ti.sums = make(map[int]float64)
@@ -83,7 +83,7 @@ func (ti *TfIdf) Save() {
 
 func (ti *TfIdf) Score(doc string) ScoredDocument {
 	score := make(map[string]float64)
-	countedDocument := ti.counter.CountOne(ti.filter.FilterOne(ti.stemmer.StemOne(ti.filter.FilterOne(ti.tokenizer.TokenizeOne(RawDocument{Id: 0, Content: doc})))))
+	countedDocument := ti.counter.CountOne(ti.stemmer.StemOne(ti.filter.FilterOne(ti.tokenizer.TokenizeOne(RawDocument{Id: 0, Content: doc}))))
 	for word, freq := range wordsTfFrequency(countedDocument.WordsCount) {
 		score[word] = freq * ti.idf[word]
 	}
@@ -92,7 +92,7 @@ func (ti *TfIdf) Score(doc string) ScoredDocument {
 
 func (ti *TfIdfNorm) Score(doc string) ScoredDocument {
 	score := make(map[string]float64)
-	countedDocument := ti.counter.CountOne(ti.filter.FilterOne(ti.stemmer.StemOne(ti.filter.FilterOne(ti.tokenizer.TokenizeOne(RawDocument{Id: 0, Content: doc})))))
+	countedDocument := ti.counter.CountOne(ti.stemmer.StemOne(ti.filter.FilterOne(ti.tokenizer.TokenizeOne(RawDocument{Id: 0, Content: doc}))))
 	sumSquared := 0.0
 	for word, freq := range wordsTfFrequency(countedDocument.WordsCount) {
 		score[word] = freq * ti.idf[word]
