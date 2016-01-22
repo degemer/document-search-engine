@@ -4,7 +4,7 @@ import (
 	"github.com/reiver/go-porterstemmer"
 )
 
-const STEMMER_WORKERS = 4
+const STEMMER_WORKERS = 2
 
 type Stemmer interface {
 	Stem(<-chan FilteredDocument) <-chan TokenizedDocument
@@ -38,9 +38,19 @@ func (ns NoStemmer) StemOne(r FilteredDocument) TokenizedDocument {
 
 func (ps PorterStemmer) Stem(filteredDocuments <-chan FilteredDocument) <-chan TokenizedDocument {
 	stemmedDocuments := make(chan TokenizedDocument, CHANNEL_SIZE)
+	stemmedChannel := make(chan bool)
+
+	for i := 1; i <= STEMMER_WORKERS; i++ {
+		go func() {
+			for r := range filteredDocuments {
+				stemmedDocuments <- ps.StemOne(r)
+			}
+			stemmedChannel <- true
+		}()
+	}
 	go func() {
-		for r := range filteredDocuments {
-			stemmedDocuments <- ps.StemOne(r)
+		for i := 1; i <= STEMMER_WORKERS; i++ {
+			<-stemmedChannel
 		}
 		close(stemmedDocuments)
 	}()
