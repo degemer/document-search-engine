@@ -11,6 +11,8 @@ import (
 	"time"
 )
 
+const VERSION = "0.1.0"
+
 func main() {
 	app := cli.NewApp()
 	app.Name = "document-search-engine"
@@ -33,6 +35,7 @@ func main() {
 		},
 	}
 	app.Commands = append([]cli.Command{}, index_command(), search_command(), measure_command())
+	app.Version = VERSION
 	app.Run(os.Args)
 }
 
