@@ -1,4 +1,4 @@
-# document-search-engine
+# document-search-engine [![Circle CI](https://circleci.com/gh/degemer/document-search-engine/tree/master.svg?style=svg)](https://circleci.com/gh/degemer/document-search-engine/tree/master)
 
 Search engine on the [CACM collection](http://ir.dcs.gla.ac.uk/resources/test_collections/cacm/).
 
