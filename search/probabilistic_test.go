@@ -12,7 +12,7 @@ func BenchmarkProbabilisticSearch(b *testing.B) {
 	if err := i.Load(); err != nil {
 		i.Create()
 	}
-	searcher := New("probabilist", i)
+	searcher := New("probabilistic", i)
 	request := `I'm interested in mechanisms for communicating between disjoint processes,
 possibly, but not exclusively, in a distributed environment.  I would
 rather see descriptions of complete mechanisms, with or without implementations,
@@ -31,7 +31,7 @@ func BenchmarkProbabilisticSearchStem(b *testing.B) {
 	if err := i.Load(); err != nil {
 		i.Create()
 	}
-	searcher := New("probabilist", i)
+	searcher := New("probabilistic", i)
 	request := `I'm interested in mechanisms for communicating between disjoint processes,
 possibly, but not exclusively, in a distributed environment.  I would
 rather see descriptions of complete mechanisms, with or without implementations,
