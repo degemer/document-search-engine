@@ -19,12 +19,16 @@ type Measurer interface {
 type CacmMeasurer struct {
 	queries map[int]string
 	results map[int][]index.DocScore
+	alpha   float64
+	beta    float64
 }
 
 func New(name string, options map[string]string) Measurer {
 	temp := new(CacmMeasurer)
 	temp.queries = loadQueries(options["cacm"])
 	temp.results = loadResults(options["cacm"])
+	temp.alpha, _ = strconv.ParseFloat(options["alpha"], 64)
+	temp.beta, _ = strconv.ParseFloat(options["beta"], 64)
 	return temp
 }
 
@@ -41,8 +45,8 @@ func (cm *CacmMeasurer) Measure(searcher search.Searcher) {
 		precision, rappel := precisionRappel(result, cm.results[query_id])
 		minMaxSum(mins, maxs, sums, precision, 0)
 		minMaxSum(mins, maxs, sums, rappel, 1)
-		minMaxSum(mins, maxs, sums, eMeasure(precision, rappel, 0.5), 2)
-		minMaxSum(mins, maxs, sums, fMeasure(precision, rappel, 1), 3)
+		minMaxSum(mins, maxs, sums, eMeasure(precision, rappel, cm.alpha), 2)
+		minMaxSum(mins, maxs, sums, fMeasure(precision, rappel, cm.beta), 3)
 		minMaxSum(mins, maxs, sums, rPrecision(result, cm.results[query_id]), 4)
 		meanAveragePrecision += averagePrecision(result, cm.results[query_id])
 	}

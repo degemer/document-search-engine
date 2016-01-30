@@ -15,6 +15,8 @@ func main() {
 	app := cli.NewApp()
 	index_name := "tf-idf"
 	cacm_path := "cacm"
+	alpha := "0.5"
+	beta := "1.0"
 	app.Name = "document-search-engine"
 	app.Usage = "Search database"
 	app.Flags = []cli.Flag{
@@ -29,6 +31,18 @@ func main() {
 			Value:       "cacm",
 			Usage:       "Path to cacm directory",
 			Destination: &cacm_path,
+		},
+		cli.StringFlag{
+			Name:        "alpha",
+			Value:       "0.5",
+			Usage:       "Alpha value for E-Measure",
+			Destination: &alpha,
+		},
+		cli.StringFlag{
+			Name:        "beta",
+			Value:       "0.5",
+			Usage:       "Beta value for F-Measure",
+			Destination: &beta,
 		},
 	}
 	app.Commands = []cli.Command{
@@ -52,6 +66,8 @@ func main() {
 			Action: func(c *cli.Context) {
 				options := make(map[string]string)
 				options["cacm"] = cacm_path
+				options["alpha"] = alpha
+				options["beta"] = beta
 
 				fmt.Println("Loading index", index_name)
 				i := index.New(index_name, options)

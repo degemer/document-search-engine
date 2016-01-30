@@ -20,7 +20,7 @@ func (ps ProbabilisticSearch) Search(request string) (result []index.DocScore) {
 	for word, _ := range scoredReq.WordsFrequency {
 		resultsWord := ps.Index.Get(word)
 		nbMatchedDocs := float64(len(resultsWord))
-		qiScore := math.Log10((numberDocuments - nbMatchedDocs)/ nbMatchedDocs)
+		qiScore := math.Log10((numberDocuments - nbMatchedDocs) / nbMatchedDocs)
 		for _, docScore := range resultsWord {
 			resultMap[docScore.Id] += piScore + qiScore
 		}
