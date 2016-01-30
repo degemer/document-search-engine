@@ -26,6 +26,11 @@ func main() {
 			Value: "cacm",
 			Usage: "Path to cacm directory",
 		},
+		cli.StringFlag{
+			Name:  "save",
+			Value: ".",
+			Usage: "Path to indexes save directory",
+		},
 	}
 	app.Commands = append([]cli.Command{}, index_command(), search_command(), measure_command())
 	app.Run(os.Args)
@@ -39,6 +44,7 @@ func index_command() cli.Command {
 		Action: func(c *cli.Context) {
 			options := make(map[string]string)
 			options["cacm"] = c.GlobalString("cacm")
+			options["saveDirectory"] = c.GlobalString("save")
 			fmt.Println("Creating index", c.GlobalString("index"))
 			i := index.New(c.GlobalString("index"), options)
 			timeIndex(i.Create, "creation")
@@ -55,6 +61,7 @@ func search_command() cli.Command {
 		Action: func(c *cli.Context) {
 			options := make(map[string]string)
 			options["cacm"] = c.GlobalString("cacm")
+			options["saveDirectory"] = c.GlobalString("save")
 			nbResults := c.Int("n")
 
 			fmt.Println("Loading index", c.GlobalString("index"))
@@ -109,6 +116,7 @@ func measure_command() cli.Command {
 		Action: func(c *cli.Context) {
 			options := make(map[string]string)
 			options["cacm"] = c.GlobalString("cacm")
+			options["saveDirectory"] = c.GlobalString("save")
 			options["alpha"] = c.String("alpha")
 			options["beta"] = c.String("beta")
 

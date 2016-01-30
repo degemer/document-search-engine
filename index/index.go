@@ -99,7 +99,7 @@ func saveDirectory(name string, options map[string]string) string {
 	if options["stemmer"] == "stem" {
 		name += "-stem"
 	}
-	return filepath.Join(INDICES_DIRECTORY, name)
+	return filepath.Join(options["saveDirectory"], INDICES_DIRECTORY, name)
 }
 
 func (ti *StandardIndex) Get(word string) []DocScore {
