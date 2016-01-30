@@ -45,7 +45,92 @@ If you specify an incorrect or empty `INDEX_TYPE` and `SEARCH_TYPE`, they will d
 
 A few examples :
 - `document-search-engine --save ~/custom_directory/ search` will load from `~/custom_directory/` a Tf-Idf index or create it (and save it in `~/custom_directory/`), create a `vectorial` search, and then wait for an input.
-- `document-search-engine -i tf-idf-stem measure vectorial-overlap` will load/create a tf-idf with stemming index, create a `vectorial` with overlap function search, and then run the test queries on it, and output the results.
-- `document-search-engine --cacm ~/custom_directory/cacm index` will create a tf-idf index, using CACM from `~/custom_directory/cacm`
+- `document-search-engine -i tf-idf-stem measure vectorial-overlap` will load/create a Tf-Idf with stemming index, create a `vectorial` with overlap function search, and then run the test queries on it, and output the results.
+- `document-search-engine --cacm ~/custom_directory/cacm index` will create a Tf-Idf index, using CACM from `~/custom_directory/cacm`
 
-##
+
+## Implementation
+
+```
+.
+├── index
+├── measure
+└── search
+```
+
+### index
+
+`index` contains all code relative to indices, i.e. the different implementation, and the pipeline to build an index :
+```
+Reader -> Tokenizer -> Filter -> Stemmer -> Counter
+```
+
+`Counter` returns the word count per document (for Tf) and global word count (for Idf). Each index then deals with them in its own way.
+
+
+### search
+
+`search` has an index as argument, and then creates the needed search.
+
+### measure
+
+`measure` creates an index and a search, and then test all the `cacm/query.text` requests.
+
+## Performance
+
+### Time performance
+
+Performance is tested using Golang benchmarks (in `*_test.go` files). They are also output when creating an index, querying an index, or running a `measure`.
+
+To run benchmarks : `go test -bench . ./...`.
+Test output has the following format : `TestName numberOfIterations timePerIteration`.
+
+Results on a i5 Macbook Pro 2013 (with comments) :
+
+```
+################################
+# Benchmarks of index creation #
+################################
+# Benchmark of Tf-Idf creation, 149ms
+BenchmarkTfIdfCreate-4        	      10	 149468796 ns/op
+# Benchmark of Tf-Idf with stemming creation, 191ms
+BenchmarkTfIdfStemCreate-4    	      10	 191585950 ns/op
+# Benchmark of Tf-Idf normalized, 167ms
+BenchmarkTfIdfNormCreate-4    	      10	 167351149 ns/op
+# Benchmark of Tf-Idf with stemming normalized, 203ms
+BenchmarkTfIdfNormStemCreate-4	       5	 203404449 ns/op
+# Benchmark of Tf normalized, 108ms
+BenchmarkTfNormCreate-4       	      10	 108301465 ns/op
+# Benchmark of Tf with stemming normalized, 140ms
+BenchmarkTfNormStemCreate-4   	      10	 140150647 ns/op
+
+############################
+# Benchmarks of query time #
+############################
+# Benchmark of Boolean Search with Tf-Idf, <1ms
+BenchmarkBooleanSearch-4          	    2000	    899328 ns/op
+# Benchmark of Probabilistic Search with Tf-Idf, <0.5ms
+BenchmarkProbabilisticSearch-4    	    3000	    451336 ns/op
+# Benchmark of Probabilistic Search with Tf-Idf stemmed, <1ms
+BenchmarkProbabilisticSearchStem-4	    2000	    885313 ns/op
+# Benchmark of Vectorial Search with Tf-Idf, <0.5ms
+BenchmarkVectorialSearch-4        	    3000	    451840 ns/op
+# Benchmark of Vectorial Search with Tf-Idf stemmed, <1ms
+BenchmarkVectorialSearchStem-4    	    2000	    853147 ns/op
+# Benchmark of Vectorial Overlap  Search with Tf-Idf, <0.5ms
+BenchmarkVectorialSearchSum-4     	    3000	    482698 ns/op
+# Benchmark of Vectorial Overlap Search with Tf-Idf stemmed, ~1ms
+BenchmarkVectorialSearchSumStem-4 	    2000	   1008302 ns/op
+```
+
+### Precision performance
+
+Everything can be tested using the `measure` command.
+
+A few remarks :
+- best MAP without stemming is obtained by using `vectorial-overlap` with `tf-idf` index.
+- best MAP with stemming is still obtained by using `vectorial-overlap` with `tf-idf-stem` index.
+- worst index is `tf-norm` (with stemming or without)
+- stemming improves MAP
+- `vectorial` and `probabilistic` have nearly the same MAP
+
